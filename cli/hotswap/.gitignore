@@ -1,0 +1,7 @@
+/hotswap
+
+hotswap.bureau.go
+hotswap.main.go
+hotswap.live.go
+hotswap.staticPluginInit.*.go
+hotswap.staticPlugins.go
