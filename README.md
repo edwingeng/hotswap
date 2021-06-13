@@ -1,3 +1,6 @@
+![Banner](imgs/banner.jpg?raw=true "Hotswap")
+
+
 *`Hotswap`* provides a solution for reloading your `go` code without either restarting your server or interrupting any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
 
 # Major Features
