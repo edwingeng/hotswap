@@ -38,7 +38,7 @@ Flags:
   -h, --help                help for build
       --include string      go-regexp matching files to include in addition to .go files
       --leaveTemps          do not delete temporary files
-      --prefixLive string   the case-insensitive name prefix of live functions and live types (default "live_")
+      --prefixLive string   the case-insensitive name prefix of live functions/types (default "live_")
       --staticLinking       generate code for static linking instead of building a plugin
   -v, --verbose             enable the verbose mode
 ```
@@ -58,7 +58,8 @@ You can find these examples under the `demo` directory. To have a direct experie
 A plugin must have the following functions defined in its root package.
 
 ``` go
-// OnLoad gets called after all plugins are successfully loaded and all dependencies are properly initialized.
+// OnLoad gets called after all plugins are successfully loaded and all dependencies are
+// properly initialized.
 func OnLoad(data interface{}) error {
   return nil
 }
