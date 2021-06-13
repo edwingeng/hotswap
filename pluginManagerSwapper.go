@@ -200,30 +200,35 @@ func (d Details) String() string {
 
 type Option func(mgr *PluginManagerSwapper)
 
+// WithLogger replaces the default logger with your own.
 func WithLogger(log slog.Logger) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.Logger = log
 	}
 }
 
+// WithFreeDelay sets the delay time of calling OnFree. The default value is 15 seconds.
 func WithFreeDelay(d time.Duration) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.opts.freeDelay = d
 	}
 }
 
+// WithReloadCallback sets the callback function of reloading.
 func WithReloadCallback(cb ReloadCallback) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.opts.reloadCallback = cb
 	}
 }
 
+// WithExtensionNewer sets the function used to create a new object for PluginManager.Vault.Extension.
 func WithExtensionNewer(newExt func() interface{}) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.opts.newExt = newExt
 	}
 }
 
+// WithStaticPlugins sets the static plugins for static linking.
 func WithStaticPlugins(plugins map[string]*StaticPlugin) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.staticPlugins = plugins
