@@ -249,7 +249,7 @@ func TestFormatDetails(t *testing.T) {
 			m[keys[j]] = vals[j]
 		}
 
-		actual := FormatDetails(m)
+		actual := Details(m).String()
 		if actual != expected {
 			t.Fatal("actual != expected")
 		}

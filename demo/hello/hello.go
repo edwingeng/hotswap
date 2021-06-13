@@ -55,7 +55,7 @@ func main() {
 		panic("no plugin is found in " + absDir)
 	} else {
 		g.Logger.Infof("<hotswap> %d plugin(s) loaded. details: [%s]",
-			len(details), hotswap.FormatDetails(details))
+			len(details), details)
 	}
 
 	go func() {
@@ -86,7 +86,7 @@ loop:
 					g.Logger.Infof("no plugin is found in " + absDir)
 				} else {
 					g.Logger.Infof("<hotswap> %d plugin(s) loaded. details: [%s]",
-						len(details), hotswap.FormatDetails(details))
+						len(details), details)
 				}
 				heartbeat()
 			}

@@ -125,7 +125,7 @@ func (wo *PluginManager) loadStaticPlugin(sp *StaticPlugin) error {
 	return nil
 }
 
-func (wo *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []ReloadCallback) (map[string]string, error) {
+func (wo *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []ReloadCallback) (Details, error) {
 	newManager := newPluginManager(wo.Logger, wo.opts.newExt)
 	if err := newManager.loadStaticPlugins(wo.staticPlugins, data); err != nil {
 		return nil, err

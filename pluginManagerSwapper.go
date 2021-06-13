@@ -56,7 +56,7 @@ func (wo *PluginManagerSwapper) Current() *PluginManager {
 	return pluginManager
 }
 
-func (wo *PluginManagerSwapper) LoadPlugins(data interface{}) (map[string]string, error) {
+func (wo *PluginManagerSwapper) LoadPlugins(data interface{}) (Details, error) {
 	wo.mu.Lock()
 	defer wo.mu.Unlock()
 
@@ -68,7 +68,7 @@ func (wo *PluginManagerSwapper) LoadPlugins(data interface{}) (map[string]string
 	return wo.loadPluginsImpl(data, cbs)
 }
 
-func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCallback) (map[string]string, error) {
+func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCallback) (Details, error) {
 	var absDir string
 	if err := hutils.FindDirectory(wo.opts.pluginDir, "pluginDir"); err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCa
 	return wo.loadPluginFiles(files, data, cbs)
 }
 
-func (wo *PluginManagerSwapper) loadPluginFiles(files []string, data interface{}, cbs []ReloadCallback) (map[string]string, error) {
+func (wo *PluginManagerSwapper) loadPluginFiles(files []string, data interface{}, cbs []ReloadCallback) (Details, error) {
 	if len(files) == 0 {
 		return nil, nil
 	}
@@ -152,11 +152,11 @@ func invokeReloadCallbacks(cbs []ReloadCallback, newManager, oldManager *PluginM
 	return nil
 }
 
-func (wo *PluginManagerSwapper) Reload(data interface{}) (map[string]string, error) {
+func (wo *PluginManagerSwapper) Reload(data interface{}) (Details, error) {
 	return wo.ReloadWithCallback(data, nil)
 }
 
-func (wo *PluginManagerSwapper) ReloadWithCallback(data interface{}, extra ReloadCallback) (map[string]string, error) {
+func (wo *PluginManagerSwapper) ReloadWithCallback(data interface{}, extra ReloadCallback) (Details, error) {
 	if wo.staticPlugins != nil {
 		return nil, errors.New("running under static linking mode")
 	}
@@ -178,9 +178,11 @@ func (wo *PluginManagerSwapper) ReloadCounter() int64 {
 	return atomic.LoadInt64(&wo.reloadCounter)
 }
 
-func FormatDetails(details map[string]string) string {
+type Details map[string]string
+
+func (d Details) String() string {
 	var a []string
-	for k := range details {
+	for k := range d {
 		a = append(a, k)
 	}
 	sort.Strings(a)
@@ -191,7 +193,7 @@ func FormatDetails(details map[string]string) string {
 			_, _ = buf.WriteString(", ")
 		}
 		x := strings.TrimSuffix(filepath.Base(k), hutils.FileNameExt)
-		_, _ = fmt.Fprintf(&buf, "%s: %s", x, details[k])
+		_, _ = fmt.Fprintf(&buf, "%s: %s", x, d[k])
 	}
 	return buf.String()
 }
