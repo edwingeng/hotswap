@@ -1,13 +1,14 @@
 ![Banner](imgs/banner.jpg?raw=true "Hotswap")
 
+[简体中文版](./README.zh-CN.md)
 
-*`Hotswap`* provides a solution for reloading your `go` code without either restarting your server or interrupting any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
+*`Hotswap`* provides a solution for reloading your `go` code without restarting your server, interrupting or blocking any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
 
 # Major Features
 
 - Reload your code like a breeze
 - Run different versions of a plugin in complete isolation
-- Invoke plugin functions from its host program with `Plugin.InvokeFunc()`
+- Invoke an in-plugin function from its host program with `Plugin.InvokeFunc()`
 - Expose in-plugin data and functions with `PluginManager.Vault.DataBag` and/or `PluginManager.Vault.Extension`
 - Handle asynchronous jobs using the latest code with `live function`, `live type`, and `live data`
 - Link plugins statically for easy debugging
@@ -47,7 +48,7 @@ Flags:
 
 You can find these examples under the `demo` directory. To have a direct experience, start a server with `run.sh` and reload its plugin(s) with `reload.sh`.
 
-1. `hello` demonstrates the basic usage, including how to organize host program and plugin, how to build plugin, how to load plugin on server startup, how to use `InvokeEach`, and finally how to reload.
+1. `hello` demonstrates the basic usage, including how to organize host and plugin, how to build them, how to load plugin on server startup, how to use `InvokeEach`, and how to reload.
 2. `extension` shows how to define a custom extension and how to use `PluginManager.Vault.Extension`. A small hint: `WithExtensionNewer()`
 3. `livex` is somewhat complex. It shows how to work with `live function`, `live type`, and `live data`.
 4. `slink` is an example of plugin static-linking, with which debugging a plugin with a debugger (delve) under MacOS and Windows becomes possible.
@@ -106,11 +107,11 @@ func Reloadable() bool {
 
 # Attentions
 
-- Build the host program with `CGO_ENABLED=1` and the `-trimpath` flag.
-- Manage your code with `git` (other VCS are not supported yet).
-- Do **not** define any global variable in a reloadable plugin unless it can be discarded at any time.
+- Build your host program with environmental variable `CGO_ENABLED=1` and the `-trimpath` flag.
+- Version control your code with `git` (other VCS are not supported yet).
+- Do **not** define any global variable in a reloadable plugin unless it can be discarded at any time or it actually never changes.
 - Do **not** create any long-running goroutine in a plugin.
-- The same struct in different versions of a plugin is actually **not** the same at runtime. Use `live function`, `live type`, and `live data` to avoid the trap.
+- The same type in different versions of a plugin is actually **not** the same at runtime. Use `live function`, `live type`, and `live data` to avoid the trap.
 - The code of your host program should **never** import any package of any plugin and the code of a plugin should **never** import any package of other plugins.
 - Old versions won't be removed from the memory because of the limitation of golang plugin. However, *`Hotswap`* offers you a chance, the `OnFree` function, to clear data caches.
 - It is highly recommended to keep the code of your host program and all its plugins in a same repository.
