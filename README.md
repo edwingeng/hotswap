@@ -62,12 +62,12 @@ A plugin must have the following functions defined in its root package.
 // OnLoad gets called after all plugins are successfully loaded and all dependencies are
 // properly initialized.
 func OnLoad(data interface{}) error {
-  return nil
+    return nil
 }
 
 // OnInit gets called after the execution of all OnLoad functions.
 func OnInit(sharedVault *vault.Vault) error {
-  return nil
+    return nil
 }
 
 // OnFree gets called at some time after a reload.
@@ -76,22 +76,22 @@ func OnFree() {
 
 // Export returns an object to be exported to other plugins.
 func Export() interface{} {
-  return nil
+    return nil
 }
 
 // Import returns an object indicating the dependencies of the plugin.
 func Import() interface{} {
-  return nil
+    return nil
 }
 
 // InvokeFunc invokes the specified function.
 func InvokeFunc(name string, params ...interface{}) (interface{}, error) {
-  return nil, nil
+    return nil, nil
 }
 
 // Reloadable indicates whether the plugin is reloadable.
 func Reloadable() bool {
-  return true
+    return true
 }
 ```
 

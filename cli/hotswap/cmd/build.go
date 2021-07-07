@@ -273,7 +273,7 @@ next1:
 	}()
 	defer func() {
 		select {
-		case chSignal <- syscall.SIGUSR1:
+		case chSignal <- syscall.SIGQUIT:
 		default:
 		}
 		<-done
@@ -281,6 +281,10 @@ next1:
 
 	var outputFile string
 	if !wo.staticLinking {
+		if runtime.GOOS == "windows" {
+			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present. Use --staticLinking if you only want to debug.\n")
+			os.Exit(1)
+		}
 		if os.Getenv("hotswap:checkRequiredPluginFuncs") != "1" {
 			parseRequiredPluginFuncs(wo.pluginDir, "")
 		}

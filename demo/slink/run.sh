@@ -69,4 +69,4 @@ if [[ $REPLY =~ ^[Nn]$ ]]; then
 fi
 
 printf "Starting $PROGRAM...\n\n"
-"$PROGRAM_EXE" --pluginDir="bin/$xOS/plugin/$PROGRAM" --pidFile="bin/$xOS/$PROGRAM.pid" "$staticLinking"
+"$PROGRAM_EXE" --pluginDir="bin/$xOS/plugin/$PROGRAM" --pidFile="bin/$xOS/$PROGRAM.pid" --signalFile="bin/$xOS/$PROGRAM.reload" "$staticLinking"

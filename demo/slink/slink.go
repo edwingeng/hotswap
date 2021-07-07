@@ -26,9 +26,11 @@ func init() {
 func main() {
 	var pluginDir string
 	var pidFile string
+	var signalFile string
 	var staticLinking bool
 	flag.StringVar(&pluginDir, "pluginDir", "", "the directory holding your plugins")
 	flag.StringVar(&pidFile, "pidFile", "", "pid file path")
+	flag.StringVar(&signalFile, "signalFile", "", "once the specified file is found on your disk, reload all plugins")
 	flag.BoolVar(&staticLinking, "staticLinking", false, "link plugin statically (not reloadable)")
 	flag.Parse()
 
@@ -41,6 +43,9 @@ func main() {
 	}
 	if pidFile == "" {
 		panic("no --pidFile")
+	}
+	if signalFile == "" {
+		panic("no --signalFile")
 	}
 
 	pid := fmt.Sprint(os.Getpid())
@@ -74,9 +79,40 @@ func main() {
 		}
 	}()
 
+	go func() {
+		for range time.Tick(time.Millisecond * 50) {
+			if _, err := os.Stat(signalFile); err != nil {
+				continue
+			}
+			g.Logger.Info("<hotswap> reloading...")
+			details, err := swapper.Reload(nil)
+			if staticLinking {
+				if err != nil {
+					g.Logger.Errorf("<hotswap> %s", err)
+					break
+				}
+				panic("impossible")
+			}
+			if err != nil {
+				panic(err)
+			} else if len(details) == 0 {
+				g.Logger.Infof("no plugin is found in " + absDir)
+			} else {
+				g.Logger.Infof("<hotswap> %d plugin(s) loaded. details: [%s]",
+					len(details), details)
+			}
+
+			heartbeat()
+			if err := os.Remove(signalFile); err != nil {
+				g.Logger.Error(err)
+				os.Exit(1)
+			}
+		}
+	}()
+
 	// Wait for signals
 	chSignal := make(chan os.Signal, 1)
-	signal.Notify(chSignal, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+	signal.Notify(chSignal, syscall.SIGINT, syscall.SIGTERM)
 
 loop:
 	for {
@@ -86,30 +122,11 @@ loop:
 			switch sig {
 			case syscall.SIGINT, syscall.SIGTERM:
 				break loop
-			case syscall.SIGUSR1:
-				g.Logger.Info("<hotswap> reloading...")
-				details, err := swapper.Reload(nil)
-				if staticLinking {
-					if err != nil {
-						g.Logger.Errorf("<hotswap> %s", err)
-						break
-					}
-					panic("impossible")
-				}
-				if err != nil {
-					panic(err)
-				} else if len(details) == 0 {
-					g.Logger.Infof("no plugin is found in " + absDir)
-				} else {
-					g.Logger.Infof("<hotswap> %d plugin(s) loaded. details: [%s]",
-						len(details), details)
-				}
-				heartbeat()
 			}
 		}
 	}
 
-	signal.Reset(syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+	signal.Reset(syscall.SIGINT, syscall.SIGTERM)
 	g.Logger.Info("THE END")
 }
 

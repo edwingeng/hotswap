@@ -44,4 +44,4 @@ plugin/dog/build.sh
 echo
 
 echo "Sending signal..."
-kill -USR1 `cat "bin/$xOS/$PROGRAM.pid"`
+touch "bin/$xOS/$PROGRAM.reload"
