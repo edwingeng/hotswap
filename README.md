@@ -118,7 +118,17 @@ func Reloadable() bool {
 
 # Live Things
 
-- `live function` is a type of function whose name is prefixed with `live_` (case-insensitive). Live functions are automatically collected and stored in `PluginManager.Vault.LiveFuncs`.
-- `live type` is a type of struct whose name is prefixed with `live_` (case-insensitive). Live types are automatically collected and stored in `PluginManager.Vault.LiveTypes`.
+- `live function` is a type of function whose name is prefixed with `live_` (case-insensitive). Live functions are automatically collected and stored in `PluginManager.Vault.LiveFuncs`. For example:
+``` go
+func live_Foo(jobData live.Data) error {
+      return nil
+}
+```
+- `live type` is a type of struct whose name is prefixed with `live_` (case-insensitive). Live types are automatically collected and stored in `PluginManager.Vault.LiveTypes`. For example:
+``` go
+type Live_Bar struct {
+      N int
+}
+```
 - [`live data`](https://github.com/edwingeng/live) is a type guardian. Convert your data into a `live data` object when scheduling an asynchronous job and restore your data from the `live data` object when handling the job.
 - See the demo `livex` for details.

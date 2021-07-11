@@ -116,7 +116,17 @@ func Reloadable() bool {
 
 # Live Things
 
-- `live function` 是以 `live_` 为名字前缀（大小写不敏感）的函数，所有这类函数都会被自动收集起来并存入 `PluginManager.Vault.LiveFuncs`。
-- `live type` 是以 `live_` 为名字前缀（大小写不敏感）的（struct）类型，所有这类 struct 都会被自动收集起来并存入 `PluginManager.Vault.LiveTypes`。
+- `live function` 是以 `live_` 为名字前缀（大小写不敏感）的函数，所有这类函数都会被自动收集起来并存入 `PluginManager.Vault.LiveFuncs`。例如：
+``` go
+func live_Foo(jobData live.Data) error {
+      return nil
+}
+```
+- `live type` 是以 `live_` 为名字前缀（大小写不敏感）的（struct）类型，所有这类 struct 都会被自动收集起来并存入 `PluginManager.Vault.LiveTypes`。例如：
+``` go
+type Live_Bar struct {
+      N int
+}
+```
 - [`live data`](https://github.com/edwingeng/live) 是个类型隔离器。你可以在创建异步任务时把任务数据转成 `live data` 对象，再在执行该任务时把数据恢复回来。
 - 例子 `livex` 包含更多细节。
