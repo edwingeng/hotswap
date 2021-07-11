@@ -207,7 +207,7 @@ func WithLogger(log slog.Logger) Option {
 	}
 }
 
-// WithFreeDelay sets the delay time of calling OnFree. The default value is 15 seconds.
+// WithFreeDelay sets the delay time of calling OnFree. The default value is 5 minutes.
 func WithFreeDelay(d time.Duration) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.opts.freeDelay = d
