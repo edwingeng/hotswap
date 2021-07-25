@@ -23,6 +23,17 @@ var (
 
 type ReloadCallback func(newManager, oldManager *PluginManager) error
 
+type pluginWhitelist []string
+
+func (pw pluginWhitelist) Contains(name string) bool {
+	for _, v := range pw {
+		if v == name {
+			return true
+		}
+	}
+	return false
+}
+
 type PluginManagerSwapper struct {
 	slog.Logger
 	current atomic.Value
@@ -32,6 +43,7 @@ type PluginManagerSwapper struct {
 		newExt         func() interface{}
 		reloadCallback ReloadCallback
 		freeDelay      time.Duration
+		whitelist      pluginWhitelist
 	}
 
 	staticPlugins map[string]*StaticPlugin
@@ -81,12 +93,31 @@ func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCa
 		return nil, err
 	}
 	var files []string
+	var found = make(map[string]struct{})
 	for _, fi := range a {
 		if fi.IsDir() {
 			continue
 		}
 		if strings.HasSuffix(fi.Name(), hutils.FileNameExt) {
+			if len(wo.opts.whitelist) > 0 {
+				if name := pluginName(fi.Name()); wo.opts.whitelist.Contains(name) {
+					found[name] = struct{}{}
+				} else {
+					continue
+				}
+			}
 			files = append(files, filepath.Join(absDir, fi.Name()))
+		}
+	}
+	if len(wo.opts.whitelist) > 0 {
+		if len(found) != len(wo.opts.whitelist) {
+			var missing []string
+			for _, v := range wo.opts.whitelist {
+				if _, ok := found[v]; !ok {
+					missing = append(missing, v)
+				}
+			}
+			return nil, errors.New("cannot find the following plugin(s): " + hutils.Join(missing...))
 		}
 	}
 
@@ -232,5 +263,12 @@ func WithExtensionNewer(newExt func() interface{}) Option {
 func WithStaticPlugins(plugins map[string]*StaticPlugin) Option {
 	return func(mgr *PluginManagerSwapper) {
 		mgr.staticPlugins = plugins
+	}
+}
+
+// WithWhitelist sets the plugins to load explicitly
+func WithWhitelist(pluginNames ...string) Option {
+	return func(mgr *PluginManagerSwapper) {
+		mgr.opts.whitelist = pluginNames
 	}
 }

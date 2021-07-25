@@ -127,7 +127,19 @@ func (wo *PluginManager) loadStaticPlugin(sp *StaticPlugin) error {
 
 func (wo *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []ReloadCallback) (Details, error) {
 	newManager := newPluginManager(wo.Logger, wo.opts.newExt)
-	if err := newManager.loadStaticPlugins(wo.staticPlugins, data); err != nil {
+	staticPlugins := wo.staticPlugins
+	if len(wo.opts.whitelist) > 0 {
+		staticPlugins = make(map[string]*StaticPlugin)
+		for _, name := range wo.opts.whitelist {
+			if p, ok := wo.staticPlugins[name]; ok {
+				staticPlugins[name] = p
+			} else {
+				return nil, fmt.Errorf("cannot find the static plugin %q", name)
+			}
+		}
+	}
+
+	if err := newManager.loadStaticPlugins(staticPlugins, data); err != nil {
 		return nil, err
 	}
 	if err := invokeReloadCallbacks(cbs, newManager, nil); err != nil {
@@ -135,7 +147,7 @@ func (wo *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []Reload
 	}
 
 	result := make(map[string]string)
-	for k := range wo.staticPlugins {
+	for k := range staticPlugins {
 		result[k] = "ok"
 	}
 
