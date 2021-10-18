@@ -107,13 +107,13 @@ func Reloadable() bool {
 
 # Attentions
 
-- Build your host program with environmental variable `CGO_ENABLED=1` and the `-trimpath` flag.
-- Version control your code with `git` (other VCS are not supported yet).
+- Build your host program with the environmental variable `CGO_ENABLED=1` and the `-trimpath` flag.
 - Do **not** define any global variable in a reloadable plugin unless it can be discarded at any time or it actually never changes.
 - Do **not** create any long-running goroutine in a plugin.
-- The same type in different versions of a plugin is actually **not** the same at runtime. Use `live function`, `live type`, and `live data` to avoid the trap.
+- The same type in different versions of a plugin are actually **not** the same at runtime. Use `live function`, `live type`, and `live data` to avoid the trap.
 - The code of your host program should **never** import any package of any plugin and the code of a plugin should **never** import any package of other plugins.
-- Old versions won't be removed from the memory because of the limitation of golang plugin. However, *`Hotswap`* offers you a chance, the `OnFree` function, to clear data caches.
+- Old versions won't be removed from the memory due to the limitation of golang plugin. However, *`Hotswap`* offers you a chance, the `OnFree` function, to clear caches.
+- It is required to manage your code with `git`.
 - It is highly recommended to keep the code of your host program and all its plugins in a same repository.
 
 # Live Things
