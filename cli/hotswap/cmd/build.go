@@ -285,7 +285,7 @@ next1:
 			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present. Use --staticLinking if you only want to debug.\n")
 			os.Exit(1)
 		}
-		if os.Getenv("hotswap:checkRequiredPluginFuncs") != "1" {
+		if os.Getenv("hotswap:checkRequiredPluginFuncs") != "0" {
 			parseRequiredPluginFuncs(wo.pluginDir, "")
 		}
 		outputFile = wo.buildPlugin()

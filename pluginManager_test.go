@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	if err := os.Setenv("hotswap:checkRequiredPluginFuncs", "1"); err != nil {
+	if err := os.Setenv("hotswap:checkRequiredPluginFuncs", "0"); err != nil {
 		panic(err)
 	}
 }

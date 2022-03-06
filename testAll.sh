@@ -32,6 +32,8 @@ function printUsage() {
     $colorful && tput setaf 7
 }
 
+printImportantMessage "It takes minutes to finish the tests."
+
 go build -o cli/hotswap/hotswap github.com/edwingeng/hotswap/cli/hotswap
 [[ $? -ne 0 ]] && exit 1
 
