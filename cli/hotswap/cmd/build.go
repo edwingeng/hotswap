@@ -31,8 +31,11 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const (
-	hotswapBureauPackageName = "hotswapbureau"
+var (
+	hotswapBureauPackageNames = [...]string{
+		"hotbureau",
+		"hotswapbureau",
+	}
 )
 
 const (
@@ -443,9 +446,11 @@ func removeStaticFiles(args completePluginArgs) {
 	}
 
 	if args.cleanOnly {
-		bureauDir := filepath.Join(args.pluginDir, hotswapBureauPackageName)
-		if err := hutils.FindDirectory(bureauDir, ""); err == nil {
-			_ = os.RemoveAll(bureauDir)
+		for _, pkgName := range hotswapBureauPackageNames {
+			bureauDir := filepath.Join(args.pluginDir, pkgName)
+			if err := hutils.FindDirectory(bureauDir, ""); err == nil {
+				_ = os.RemoveAll(bureauDir)
+			}
 		}
 	}
 
@@ -900,7 +905,14 @@ func parseHotswapComment(group *ast.CommentGroup) string {
 }
 
 func genHotswapBureau(args completePluginArgs, generated *generatedFiles) {
-	dir := filepath.Join(args.tmpDir, hotswapBureauPackageName)
+	for _, pkgName := range hotswapBureauPackageNames {
+		bureauDir := filepath.Join(args.pluginDir, pkgName)
+		if err := hutils.FindDirectory(bureauDir, ""); err == nil {
+			_ = os.RemoveAll(bureauDir)
+		}
+	}
+
+	dir := filepath.Join(args.tmpDir, hotswapBureauPackageNames[0])
 	if err := os.MkdirAll(dir, 0744); err != nil {
 		panic(err)
 	}
@@ -942,7 +954,7 @@ func genHotswapMain(args completePluginArgs, livePackages map[string]*packages.P
 		LivePackages      []string
 	}{
 		PackageName:       pkgName,
-		BureauPackagePath: path.Join(args.tmpPkgPath, hotswapBureauPackageName),
+		BureauPackagePath: path.Join(args.tmpPkgPath, hotswapBureauPackageNames[0]),
 		LivePackages:      a,
 	}
 
@@ -972,7 +984,7 @@ func genHotswapLive(args completePluginArgs, dir string, pkg *packages.Package, 
 		LiveTypes         []string
 	}{
 		PackageName:       pkg.Name,
-		BureauPackagePath: path.Join(args.tmpPkgPath, hotswapBureauPackageName),
+		BureauPackagePath: path.Join(args.tmpPkgPath, hotswapBureauPackageNames[0]),
 		LiveFuncs:         liveFuncs,
 		LiveTypes:         liveTypes,
 	}

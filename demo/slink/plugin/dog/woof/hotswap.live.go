@@ -3,7 +3,7 @@
 package woof
 
 import (
-	"github.com/edwingeng/hotswap/demo/slink/plugin/dog/hotswapbureau"
+	"github.com/edwingeng/hotswap/demo/slink/plugin/dog/hotbureau"
 )
 
 func init() {
