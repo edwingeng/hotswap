@@ -388,7 +388,7 @@ func TestPluginManager_loadPlugins_importall(t *testing.T) {
 	resetOrderMap()
 	for k := range m {
 		str := fmt.Sprintf("invoking %s.OnLoad", k)
-		_, i, ok := log.Find(str)
+		_, i, ok := log.Finder().Find(str)
 		if !ok {
 			t.Fatalf("cannot find %q in the log", str)
 		}
@@ -404,7 +404,7 @@ func TestPluginManager_loadPlugins_importall(t *testing.T) {
 	resetOrderMap()
 	for k := range m {
 		str := fmt.Sprintf("invoking %s.OnInit", k)
-		_, i, ok := log.Find(str)
+		_, i, ok := log.Finder().Find(str)
 		if !ok {
 			t.Fatalf("cannot find %q in the log", str)
 		}
@@ -421,7 +421,7 @@ func TestPluginManager_loadPlugins_importall(t *testing.T) {
 	resetOrderMap()
 	for k := range m {
 		str := fmt.Sprintf("invoking %s.OnFree", k)
-		_, i, ok := log.Find(str)
+		_, i, ok := log.Finder().Find(str)
 		if !ok {
 			t.Fatalf("cannot find %q in the log", str)
 		}
@@ -444,11 +444,11 @@ func TestPluginManager_loadPlugins_importall(t *testing.T) {
 		t.Fatal("len(newMgr.pluginMap) != len(pluginNames)")
 	}
 	s1 := "not reloadable: [stubborn]"
-	if _, _, ok := log.Find(s1); !ok {
+	if !log.StringExists(s1) {
 		t.Fatalf("cannot find %q in the log", s1)
 	}
 	s2 := "to be loaded: []"
-	if _, _, ok := log.Find(s2); !ok {
+	if !log.StringExists(s2) {
 		t.Fatalf("cannot find %q in the log", s2)
 	}
 	invariants(t, newMgr)
@@ -749,7 +749,7 @@ func panics_checkLog(t *testing.T, log *slog.Scavenger, env string, pluginNames 
 	x := strings.TrimPrefix(env, "panics:")
 	for _, pName := range pluginNames {
 		str := fmt.Sprintf("<%s> %s", pName, x)
-		_, idx, ok := log.Find(str)
+		_, idx, ok := log.Finder().Find(str)
 		if !ok {
 			t.Fatal("cannot find the following message in log: " + str)
 		}
@@ -775,7 +775,7 @@ func panics_checkInvokeEveryOnFree(t *testing.T, log *slog.Scavenger, random boo
 	var a []int
 	for _, pName := range pluginNames {
 		str := fmt.Sprintf("<hotswap> invoking %s.OnFree", pName)
-		_, idx, ok := log.Find(str)
+		_, idx, ok := log.Finder().Find(str)
 		if !ok {
 			t.Fatal("cannot find the following message in log: " + str)
 		}

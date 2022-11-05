@@ -36,11 +36,11 @@ func MakeRollCall(pluginName string, compileTimeString string) {
 	name := namePool[rand.Intn(len(namePool))]
 	g.Logger.Infof("<%s.%s> %s? reloadCounter: %v",
 		pluginName, compileTimeString, name, g.PluginManagerSwapper.ReloadCounter())
-	g.Tickque.AddJob("live_ResponseRollCall", g.LiveHelper.WrapString(name))
+	g.Tickque.AddJob("live_ResponseRollCall", live.WrapString(name))
 }
 
 func live_ResponseRollCall(pluginName string, compileTimeString string, jobData live.Data) error {
-	name := jobData.ToString()
+	name := jobData.String()
 	resp := respPool[rand.Intn(len(respPool))]
 	g.Logger.Infof("<%s.%s> %s: %s. reloadCounter: %v",
 		pluginName, compileTimeString, name, resp, g.PluginManagerSwapper.ReloadCounter())
@@ -69,7 +69,7 @@ func addJobIndirect(obj interface{}) {
 	}
 
 	jobType := typ.Elem().Name()
-	jobData := g.LiveHelper.WrapJSONObj(obj)
+	jobData := live.MustWrapObject(obj)
 	g.Tickque.AddJob(jobType, jobData)
 }
 

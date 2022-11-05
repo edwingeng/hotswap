@@ -69,7 +69,7 @@ func OnJob(job *tickque.Job) error {
 
 	if f, ok := pg.SharedVault.LiveTypes[job.Type]; ok {
 		newObj := f()
-		job.Data.ToJSONObj(newObj)
+		job.Data.MustUnwrapObject(newObj)
 		return newObj.(JobHandler2).Handle(pluginName, CompileTimeString)
 	}
 

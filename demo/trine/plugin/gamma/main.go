@@ -1,10 +1,7 @@
 package gamma
 
 import (
-	"bytes"
-	"math/rand"
-
-	"github.com/edwingeng/hotswap/demo/trine/g"
+	"github.com/edwingeng/hotswap/demo/trine/plugin/gamma/gimpl"
 	"github.com/edwingeng/hotswap/vault"
 )
 
@@ -39,29 +36,11 @@ func Import() interface{} {
 func InvokeFunc(name string, params ...interface{}) (interface{}, error) {
 	switch name {
 	case "pulse":
-		g.Logger.Infof("<%s.%s> === pulse ===. reloadCounter: %v",
-			pluginName, CompileTimeString, g.PluginManagerSwapper.ReloadCounter())
-		Deps.Beta.Two(randString(), randVector(), randString(), randVector())
+		gimpl.Pulse(pluginName, CompileTimeString, Deps.Beta)
 	}
 	return nil, nil
 }
 
 func Reloadable() bool {
 	return true
-}
-
-func randString() string {
-	var buf bytes.Buffer
-	n := rand.Intn(5) + 1
-	for i := 0; i < n; i++ {
-		buf.WriteByte(byte('A' + rand.Intn(26)))
-	}
-	return buf.String()
-}
-
-func randVector() g.Vector {
-	return g.Vector{
-		X: rand.Intn(100),
-		Y: rand.Intn(100),
-	}
 }

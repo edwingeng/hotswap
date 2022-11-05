@@ -1,10 +1,12 @@
 package alpha
 
-import "github.com/edwingeng/hotswap/demo/trine/g"
+import (
+	"github.com/edwingeng/hotswap/demo/trine/g"
+	"github.com/edwingeng/hotswap/demo/trine/plugin/alpha/aimpl"
+)
 
 type exportX struct{}
 
 func (_ exportX) One(str1 string, v1 g.Vector) {
-	g.Logger.Infof("<%s.%s> str1: %s, v1: %v. reloadCounter: %v",
-		pluginName, CompileTimeString, str1, v1, g.PluginManagerSwapper.ReloadCounter())
+	aimpl.One(str1, v1, pluginName, CompileTimeString)
 }

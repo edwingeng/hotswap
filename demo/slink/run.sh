@@ -68,5 +68,10 @@ if [[ $REPLY =~ ^[Nn]$ ]]; then
     echo
 fi
 
+signalFile="bin/$xOS/$PROGRAM.reload"
+if [[ -f "$signalFile" ]]; then
+    rm "$signalFile"
+fi
+
 printf "Starting $PROGRAM...\n\n"
-"$PROGRAM_EXE" --pluginDir="bin/$xOS/plugin/$PROGRAM" --pidFile="bin/$xOS/$PROGRAM.pid" --signalFile="bin/$xOS/$PROGRAM.reload" "$staticLinking"
+"$PROGRAM_EXE" --pluginDir="bin/$xOS/plugin/$PROGRAM" --pidFile="bin/$xOS/$PROGRAM.pid" --signalFile="$signalFile" "$staticLinking"

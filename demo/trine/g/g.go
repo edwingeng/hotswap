@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	Logger = slog.NewConsoleLogger()
+	Logger = slog.NewDevelopmentConfig().MustBuild()
 )
 
 var (

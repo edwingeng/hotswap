@@ -53,7 +53,7 @@ type PluginManagerSwapper struct {
 }
 
 func NewPluginManagerSwapper(pluginDir string, opts ...Option) *PluginManagerSwapper {
-	swapper := &PluginManagerSwapper{Logger: slog.NewConsoleLogger()}
+	swapper := &PluginManagerSwapper{Logger: slog.NewDevelopmentConfig().MustBuild()}
 	swapper.opts.pluginDir = pluginDir
 	swapper.opts.freeDelay = time.Minute * 5
 	for _, opt := range opts {

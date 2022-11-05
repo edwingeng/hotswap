@@ -8,13 +8,16 @@ import (
 )
 
 var (
-	Logger = slog.NewConsoleLogger()
+	Logger = slog.NewDevelopmentConfig().MustBuild()
 )
 
 var (
 	PluginManagerSwapper *hotswap.PluginManagerSwapper
-	LiveHelper           live.Helper
 	Tickque              *tickque.Tickque
+)
+
+var (
+	LiveConfig live.Config
 )
 
 type VaultExtension struct {

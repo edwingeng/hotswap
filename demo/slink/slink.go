@@ -89,7 +89,12 @@ func main() {
 			if staticLinking {
 				if err != nil {
 					g.Logger.Errorf("<hotswap> %s", err)
-					break
+					err = os.Remove(signalFile)
+					if err != nil {
+						break
+					} else {
+						continue
+					}
 				}
 				panic("impossible")
 			}
@@ -133,7 +138,7 @@ loop:
 func heartbeat() {
 	var job tickque.Job
 	job.Type = "live_Woof"
-	job.Data = live.NewHelper(nil).WrapInt(rand.Intn(3) + 1)
+	job.Data = live.WrapInt(rand.Intn(3) + 1)
 	err := g.PluginManagerSwapper.Current().Extension.(*g.VaultExtension).OnJob(&job)
 	if err != nil {
 		g.Logger.Error(err)

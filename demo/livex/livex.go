@@ -61,10 +61,10 @@ func main() {
 			len(details), details)
 	}
 
-	g.LiveHelper = live.NewHelper([]string{
+	g.LiveConfig = live.NewConfig([]string{
 		"github.com/edwingeng/hotswap/demo/livex/plugin",
 	})
-	g.Tickque = tickque.NewTickque("livex", tickque.WithLogger(g.Logger))
+	g.Tickque = tickque.NewTickque(g.Logger)
 	go func() {
 		t := time.Tick(time.Millisecond * 50)
 		for range t {

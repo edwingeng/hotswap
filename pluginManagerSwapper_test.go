@@ -82,7 +82,7 @@ func TestPluginManagerSwapper_LoadPlugins(t *testing.T) {
 	details2, err := swapper2.Reload(log)
 	if err != nil {
 		t.Fatal(err)
-	} else if _, _, ok := log.FindString("invoking snow.OnFree"); ok {
+	} else if log.StringExists("invoking snow.OnFree") {
 		t.Fatal("OnFree should not run this early")
 	}
 	for k, v := range details2 {
@@ -137,11 +137,11 @@ func TestPluginManagerSwapper_LoadPlugins(t *testing.T) {
 		str := fmt.Sprintf("invoking %s.OnFree", pName)
 		switch pName {
 		case "arya", "stubborn":
-			if _, _, ok := log.FindString(str); ok {
+			if log.StringExists(str) {
 				t.Fatal("unexpected message: " + str)
 			}
 		case "snow":
-			if _, _, ok := log.FindString(str); !ok {
+			if !log.StringExists(str) {
 				t.Fatal("snow.OnFree should have been invoked")
 			}
 		default:
@@ -179,7 +179,7 @@ func TestPluginManagerSwapper_ReloadWithCallback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, ok := log.FindString("Reloaded: 1"); !ok {
+	if !log.StringExists("Reloaded: 1") {
 		t.Fatal("ReloadCallback does not work as expected")
 	}
 
@@ -188,7 +188,7 @@ func TestPluginManagerSwapper_ReloadWithCallback(t *testing.T) {
 	if _, err := swapper.Reload(log); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, ok := log.FindString("Reloaded: 2"); !ok {
+	if !log.StringExists("Reloaded: 2") {
 		t.Fatal("ReloadCallback does not work as expected")
 	}
 
@@ -197,7 +197,7 @@ func TestPluginManagerSwapper_ReloadWithCallback(t *testing.T) {
 	if _, err := swapper.Reload(log); err == nil {
 		t.Fatal("Reload should fail when ReloadCallback returns an error")
 	}
-	if _, _, ok := log.FindString("invoking snow.OnFree"); !ok {
+	if !log.StringExists("invoking snow.OnFree") {
 		t.Fatal("snow.OnFree should have been invoked")
 	}
 
@@ -206,7 +206,7 @@ func TestPluginManagerSwapper_ReloadWithCallback(t *testing.T) {
 	if _, err := swapper.Reload(log); err == nil {
 		t.Fatal("Reload should fail when ReloadCallback panics")
 	}
-	if _, _, ok := log.FindString("invoking snow.OnFree"); !ok {
+	if !log.StringExists("invoking snow.OnFree") {
 		t.Fatal("snow.OnFree should have been invoked")
 	}
 
