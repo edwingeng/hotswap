@@ -37,4 +37,11 @@ printImportantMessage "It takes minutes to finish the tests."
 go build -o cli/hotswap/hotswap github.com/edwingeng/hotswap/cli/hotswap
 [[ $? -ne 0 ]] && exit 1
 
-go test -trimpath "$@"
+cli/hotswap/hotswap build --staticLinking cli/hotswap/trial/arya cli/hotswap/trial
+[[ $? -ne 0 ]] && exit 1
+cli/hotswap/hotswap build --staticLinking cli/hotswap/trial/snow cli/hotswap/trial
+[[ $? -ne 0 ]] && exit 1
+cli/hotswap/hotswap build --staticLinking cli/hotswap/trial/stubborn cli/hotswap/trial
+[[ $? -ne 0 ]] && exit 1
+
+go test -trimpath -v "$@"

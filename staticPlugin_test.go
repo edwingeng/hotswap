@@ -1,13 +1,13 @@
 package hotswap_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/edwingeng/hotswap"
 	"github.com/edwingeng/hotswap/cli/hotswap/trial"
-	"github.com/edwingeng/hotswap/internal/hutils"
 	"github.com/edwingeng/slog"
 )
 
@@ -18,19 +18,14 @@ func prepareEnv(t *testing.T, env string) {
 	}
 }
 
-func prepareStaticPlugins(t *testing.T, pluginNames ...string) {
-	t.Helper()
-	const exe = "cli/hotswap/hotswap"
-	const homeDir = "cli/hotswap/trial"
-	for _, pName := range pluginNames {
-		pluginDir := filepath.Join(homeDir, pName)
-		hutils.BuildPlugin(t, exe, pluginDir, homeDir, "--staticLinking")
-	}
-}
-
 func TestWithStaticPlugins(t *testing.T) {
 	pluginNames := []string{"arya", "snow", "stubborn"}
-	prepareStaticPlugins(t, pluginNames...)
+	for _, pName := range pluginNames {
+		file := filepath.Join("cli/hotswap/trial", fmt.Sprintf("hotswap.staticPluginInit.%s.go", pName))
+		if _, err := os.Stat(file); err != nil {
+			t.SkipNow()
+		}
+	}
 
 	log := slog.NewScavenger()
 	swapper := hotswap.NewPluginManagerSwapper("",
