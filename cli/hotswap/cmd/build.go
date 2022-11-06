@@ -109,8 +109,8 @@ func init() {
 		"cleanOnly", false, "clean static linking files, only")
 	cmd.Flags().BoolVar(&buildCmd.debug,
 		"debug", false, "enable the debug mode")
-	cmd.Flags().StringVar(&buildCmd.prefixLive,
-		"prefixLive", "live_", "the case-insensitive name prefix of live functions and live types")
+	cmd.Flags().StringVar(&buildCmd.livePrefix,
+		"livePrefix", "live_", "the case-insensitive name prefix of live functions and live types")
 	cmd.Flags().StringVar(&buildCmd.include,
 		"include", "", "go-regexp matching files to include in addition to .go files")
 	cmd.Flags().StringVar(&buildCmd.exclude,
@@ -128,7 +128,7 @@ type buildCmdT struct {
 	staticLinking bool
 	cleanOnly     bool
 	debug         bool
-	prefixLive    string
+	livePrefix    string
 	pluginDir     string
 	outputDir     string
 	include       string
@@ -160,9 +160,9 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	wo.prefixLive = strings.ToLower(strings.TrimSpace(wo.prefixLive))
-	if wo.prefixLive == "" {
-		panic("--prefixLive cannot be empty")
+	wo.livePrefix = strings.ToLower(strings.TrimSpace(wo.livePrefix))
+	if wo.livePrefix == "" {
+		panic("--livePrefix cannot be empty")
 	}
 
 	timing.totalStart = time.Now()
@@ -866,7 +866,7 @@ type completePluginArgs struct {
 	gofmt         bool
 	clean         bool
 	cleanOnly     bool
-	prefixLive    string
+	livePrefix    string
 	pluginDir     string
 	outputDir     string
 	pluginPkgPath string
@@ -882,7 +882,7 @@ func buildCompletePluginArgs(cmd *buildCmdT, gofmt, clean bool, genStaticCode fu
 		gofmt:         gofmt,
 		clean:         clean,
 		cleanOnly:     cmd.cleanOnly,
-		prefixLive:    cmd.prefixLive,
+		livePrefix:    cmd.livePrefix,
 		pluginDir:     cmd.pluginDir,
 		outputDir:     cmd.outputDir,
 		pluginPkgPath: cmd.pluginPkgPath,
@@ -1055,7 +1055,7 @@ func completePlugin(args completePluginArgs) {
 					}
 					funcName := funcDecl.Name.Name
 					funcNameLower := strings.ToLower(funcName)
-					if !strings.HasPrefix(funcNameLower, args.prefixLive) {
+					if !strings.HasPrefix(funcNameLower, args.livePrefix) {
 						continue
 					}
 					if _, ok := liveNames[funcName]; ok {
@@ -1076,7 +1076,7 @@ func completePlugin(args completePluginArgs) {
 						}
 						typeName := typeSpec.Name.Name
 						typeNameLower := strings.ToLower(typeName)
-						if !strings.HasPrefix(typeNameLower, args.prefixLive) {
+						if !strings.HasPrefix(typeNameLower, args.livePrefix) {
 							continue
 						}
 						if _, ok := typeSpec.Type.(*ast.StructType); !ok {
