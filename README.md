@@ -2,14 +2,14 @@
 
 [简体中文版](./README.zh-CN.md)
 
-*`Hotswap`* provides a solution for reloading your `go` code without restarting your server, interrupting or blocking any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
+*`Hotswap`* provides a solution to reload your `go` code without restarting your server, interrupting or blocking any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
 
 # Major Features
 
 - Reload your code like a breeze
 - Run different versions of a plugin in complete isolation
 - Invoke an in-plugin function from its host program with `Plugin.InvokeFunc()`
-- Expose in-plugin data and functions with `PluginManager.Vault.DataBag` and/or `PluginManager.Vault.Extension`
+- Expose in-plugin data and functions with `PluginManager.Vault.Extension` and/or `PluginManager.Vault.DataBag`
 - Handle asynchronous jobs using the latest code with `live function`, `live type`, and `live data`
 - Link plugins statically for easy debugging
 - Expose functions to other plugins with `Export()`
@@ -39,7 +39,7 @@ Flags:
   -h, --help                help for build
       --include string      go-regexp matching files to include in addition to .go files
       --leaveTemps          do not delete temporary files
-      --livePrefix string   the case-insensitive name prefix of live functions/types (default "live_")
+      --livePrefix string   the case-insensitive name prefix of live functions and live types (default "live_")
       --staticLinking       generate code for static linking instead of building a plugin
   -v, --verbose             enable the verbose mode
 ```
@@ -59,13 +59,12 @@ You can find these examples under the `demo` directory. To have a direct experie
 A plugin must have the following functions defined in its root package.
 
 ``` go
-// OnLoad gets called after all plugins are successfully loaded and all dependencies are
-// properly initialized.
+// OnLoad gets called after all plugins are successfully loaded and before the Vault is initialized.
 func OnLoad(data interface{}) error {
     return nil
 }
 
-// OnInit gets called after the execution of all OnLoad functions.
+// OnInit gets called after the execution of all OnLoad functions. The Vault is ready now.
 func OnInit(sharedVault *vault.Vault) error {
     return nil
 }
@@ -74,7 +73,7 @@ func OnInit(sharedVault *vault.Vault) error {
 func OnFree() {
 }
 
-// Export returns an object to be exported to other plugins.
+// Export returns an object to export to other plugins.
 func Export() interface{} {
     return nil
 }
@@ -102,7 +101,8 @@ func Reloadable() bool {
 2. Export
 3. Import
 4. OnLoad
-5. OnInit
+5. Vault Initialization
+6. OnInit
 ```
 
 # Attentions
@@ -130,5 +130,5 @@ type Live_Bar struct {
       N int
 }
 ```
-- [`live data`](https://github.com/edwingeng/live) is a type guardian. Convert your data into a `live data` object when scheduling an asynchronous job and restore your data from the `live data` object when handling the job.
+- [`live data`](https://github.com/edwingeng/live) is a type guardian. You can convert your data into a `live data` object when scheduling an asynchronous job and restore your data from the `live data` object when handling the job.
 - See the demo `livex` for details.

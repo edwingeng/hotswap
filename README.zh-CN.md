@@ -1,14 +1,14 @@
 ![Banner](imgs/banner.jpg?raw=true "Hotswap")
 
-*`Hotswap`* 为 `go` 语言代码热更提供了一套相当完整的解决方案，热更过程不会中断或阻塞任何执行中的函数，更不会重启服务器。此方案建立在 `go` 语言的 `plugin` 机制之上。
+*`Hotswap`* 为 `go` 语言提供了一套相当完整的代码热更解决方案，热更过程不会中断或阻塞任何执行中的函数，更不会重启服务器。此方案建立在 `go` 语言的 `plugin` 机制之上。
 
 # 核心功能
 
 - 轻松热更代码
 - 完全隔离新老版本
 - 通过 `Plugin.InvokeFunc()` 从宿主调用插件中的函数
-- 通过 `PluginManager.Vault.DataBag` 和 `PluginManager.Vault.Extension` 对外暴露插件中的数据和函数
-- 通过 `live function`, `live type` 和 `live data` 用最新代码执行异步任务
+- 通过 `PluginManager.Vault.Extension` 和 `PluginManager.Vault.DataBag` 向宿主暴露插件中的数据和函数
+- 借助 `live function`、`live type` 和 `live data` 用最新代码执行异步任务
 - 支持静态链接插件，以方便调试
 - 通过 `Export()` 向其它插件暴露函数
 - 通过 `Import()` 声明、建立对其它插件的依赖
@@ -37,7 +37,7 @@ Flags:
   -h, --help                help for build
       --include string      go-regexp matching files to include in addition to .go files
       --leaveTemps          do not delete temporary files
-      --livePrefix string   the case-insensitive name prefix of live functions/types (default "live_")
+      --livePrefix string   the case-insensitive name prefix of live functions and live types (default "live_")
       --staticLinking       generate code for static linking instead of building a plugin
   -v, --verbose             enable the verbose mode
 ```
@@ -57,13 +57,12 @@ Flags:
 每个插件都要在其根 package 下定义以下函数：
 
 ``` go
-// OnLoad gets called after all plugins are successfully loaded and all dependencies are
-// properly initialized.
+// OnLoad gets called after all plugins are successfully loaded and before the Vault is initialized.
 func OnLoad(data interface{}) error {
     return nil
 }
 
-// OnInit gets called after the execution of all OnLoad functions.
+// OnInit gets called after the execution of all OnLoad functions. The Vault is ready now.
 func OnInit(sharedVault *vault.Vault) error {
     return nil
 }
@@ -72,7 +71,7 @@ func OnInit(sharedVault *vault.Vault) error {
 func OnFree() {
 }
 
-// Export returns an object to be exported to other plugins.
+// Export returns an object to export to other plugins.
 func Export() interface{} {
     return nil
 }
@@ -100,18 +99,19 @@ func Reloadable() bool {
 2. Export
 3. Import
 4. OnLoad
-5. OnInit
+5. Vault Initialization
+6. OnInit
 ```
 
 # 注意事项
 
 - 编译宿主程序时，要加上环境变量 `CGO_ENABLED=1`，并指定编译参数 `-trimpath`。
-- 用 `git` 管理代码，其它 VCS 尚不支持。
 - 不要在可热更的插件里定义全局变量，除非这些变量实际上从不改变，或其值可随时丢弃。
 - 不要在插件里启动长时间运行的 goroutine。
-- 小心插件里定义的类型，因为在运行时 `go` 认为不同插件版本中的同一类型是不同类型，数据实例无法相互赋值。你可以通过 `live function`, `live type` 和 `live data` 规避这一陷阱。
+- 小心那些在插件里定义的类型，在程序运行过程中，`go` 认为不同插件版本中的同一类型是不同类型，数据实例无法相互赋值。你可以借助 `live function`, `live type` 和 `live data` 规避这一陷阱。
 - 宿主代码不要 import 任何插件的任何 package；任何插件都不要 import 其它插件的任何 package。
-- 热更后，旧版插件会继续留在内存中，永不释放，这是 `plugin` 的限制。不过你有个清理缓存的机会：`OnFree`。
+- 热更后，旧版插件会继续留在内存中，永不释放，这是 `plugin` 的限制导致的。不过你有个清理缓存的机会：`OnFree`。
+- 用 `git` 管理代码，其它 VCS 尚不支持。
 - 强烈建议：用同一个代码仓库管理宿主程序和所有插件。
 
 # Live Things
@@ -128,5 +128,5 @@ type Live_Bar struct {
       N int
 }
 ```
-- [`live data`](https://github.com/edwingeng/live) 是个类型隔离器。你可以在创建异步任务时把任务数据转成 `live data` 对象，再在执行该任务时把数据恢复回来。
+- [`live data`](https://github.com/edwingeng/live) 是个类型隔离器。你可以在创建异步任务时把任务数据转成 `live data` 对象，再在执行任务时把数据恢复回来。
 - 例子 `livex` 包含更多细节。
