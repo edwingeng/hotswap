@@ -467,13 +467,10 @@ func removeStaticFiles(args completePluginArgs) {
 
 	numInitFiles := countPluginInitFiles(args)
 	pluginVarDefFile := filepath.Join(args.outputDir, hotswapStaticPluginsFile)
-	var pluginVarDefFileRemoved bool
+	var pluginVarDefFileWantRemoved bool
 	if numInitFiles == 0 {
 		if _, err := os.Stat(pluginVarDefFile); err == nil {
-			err := os.RemoveAll(pluginVarDefFile)
-			if err == nil {
-				pluginVarDefFileRemoved = true
-			}
+			pluginVarDefFileWantRemoved = true
 		}
 	}
 
@@ -487,16 +484,17 @@ func removeStaticFiles(args completePluginArgs) {
 		for _, f := range a {
 			fmt.Println("\t" + f)
 		}
-		if pluginInitFileRemoved || pluginVarDefFileRemoved {
+		if pluginInitFileRemoved {
 			fmt.Println()
 			fmt.Println("Removed Files:")
 			fmt.Println(strings.Repeat("=", 30))
-			if pluginInitFileRemoved {
-				fmt.Println("\t" + fmt.Sprintf(hotswapStaticPluginInitFile, pluginName))
-			}
-			if pluginVarDefFileRemoved {
-				fmt.Println("\t" + hotswapStaticPluginsFile)
-			}
+			fmt.Println("\t" + fmt.Sprintf(hotswapStaticPluginInitFile, pluginName))
+		}
+		if pluginVarDefFileWantRemoved {
+			fmt.Println()
+			fmt.Println("Files May Need to Remove Manually")
+			fmt.Println(strings.Repeat("=", 30))
+			fmt.Println("\t" + hotswapStaticPluginsFile)
 		}
 	}
 }
