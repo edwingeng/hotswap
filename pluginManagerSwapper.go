@@ -209,6 +209,10 @@ func (wo *PluginManagerSwapper) ReloadCounter() int64 {
 	return atomic.LoadInt64(&wo.reloadCounter)
 }
 
+func (wo *PluginManagerSwapper) StaticLinkingMode() bool {
+	return wo.staticPlugins != nil
+}
+
 type Details map[string]string
 
 func (d Details) String() string {
