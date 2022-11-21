@@ -28,18 +28,18 @@ Usage:
 Examples:
 hotswap build plugin/foo bin
 hotswap build -v plugin/foo bin -- -race
-hotswap build --staticLinking plugin/foo pluginHost
+hotswap build --staticLinking plugin/foo plugin
 
 Flags:
-      --debug               enable the debug mode
+      --debug               enable debug mode
       --exclude string      go-regexp matching files to exclude from included
       --goBuild             if --goBuild=false, skip the go build procedure (default true)
   -h, --help                help for build
       --include string      go-regexp matching files to include in addition to .go files
       --leaveTemps          do not delete temporary files
-      --livePrefix string   the case-insensitive name prefix of live functions and live types (default "live_")
+      --livePrefix string   case-insensitive name prefix of live functions and live types (default "live_")
       --staticLinking       generate code for static linking instead of building a plugin
-  -v, --verbose             enable the verbose mode
+  -v, --verbose             enable verbose mode
 ```
 
 # 示例

@@ -84,7 +84,7 @@ var buildCmd buildCmdT
 const (
 	buildExamples = `hotswap build plugin/foo bin
 hotswap build -v plugin/foo bin -- -race
-hotswap build --staticLinking plugin/foo pluginHost`
+hotswap build --staticLinking plugin/foo plugin`
 )
 
 var buildCmdCobra = &cobra.Command{
@@ -98,7 +98,7 @@ func init() {
 	rootCmd.AddCommand(buildCmdCobra)
 	cmd := buildCmdCobra
 	cmd.Flags().BoolVarP(&buildCmd.verbose,
-		"verbose", "v", false, "enable the verbose mode")
+		"verbose", "v", false, "enable verbose mode")
 	cmd.Flags().BoolVar(&buildCmd.leaveTemps,
 		"leaveTemps", false, "do not delete temporary files")
 	cmd.Flags().BoolVar(&buildCmd.goBuild,
@@ -106,17 +106,17 @@ func init() {
 	cmd.Flags().BoolVar(&buildCmd.staticLinking,
 		"staticLinking", false, "generate code for static linking instead of building a plugin")
 	cmd.Flags().BoolVar(&buildCmd.cleanOnly,
-		"cleanOnly", false, "clean static linking files, only")
+		"clean", false, "clean static linking files")
 	cmd.Flags().BoolVar(&buildCmd.debug,
-		"debug", false, "enable the debug mode")
+		"debug", false, "enable debug mode")
 	cmd.Flags().StringVar(&buildCmd.livePrefix,
-		"livePrefix", "live_", "the case-insensitive name prefix of live functions and live types")
+		"livePrefix", "live_", "case-insensitive name prefix of live functions and live types")
 	cmd.Flags().StringVar(&buildCmd.include,
 		"include", "", "go-regexp matching files to include in addition to .go files")
 	cmd.Flags().StringVar(&buildCmd.exclude,
 		"exclude", "", "go-regexp matching files to exclude from included")
 
-	if err := cmd.Flags().MarkHidden("cleanOnly"); err != nil {
+	if err := cmd.Flags().MarkHidden("clean"); err != nil {
 		panic(err)
 	}
 }
@@ -168,10 +168,10 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 	timing.totalStart = time.Now()
 	wo.pluginDir = args[0]
 	wo.outputDir = args[1]
-	if err := hutils.FindDirectory(wo.pluginDir, "pluginDir"); err != nil {
+	if err := hutils.FindDirectory(wo.pluginDir, "<pluginDir>"); err != nil {
 		panic(err)
 	}
-	if err := hutils.FindDirectory(wo.outputDir, "outputDir"); err != nil {
+	if err := hutils.FindDirectory(wo.outputDir, "<outputDir>"); err != nil {
 		if !os.IsNotExist(err) {
 			panic(err)
 		} else if wo.staticLinking {
@@ -285,7 +285,8 @@ next1:
 	var outputFile string
 	if !wo.staticLinking {
 		if runtime.GOOS == "windows" {
-			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present. Use --staticLinking if you only want to debug.\n")
+			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present, " +
+				"try the static linking mode (--staticLinking) instead.\n")
 			os.Exit(1)
 		}
 		if os.Getenv("hotswap:checkRequiredPluginFuncs") != "0" {
@@ -380,7 +381,7 @@ func (wo *buildCmdT) commitInfo() string {
 }
 
 func (wo *buildCmdT) genStaticPlugin() {
-	fmt.Printf("Generating code for static plugin %s...\n", filepath.Base(wo.pluginDir))
+	fmt.Printf("Generating static code for plugin %q...\n", filepath.Base(wo.pluginDir))
 	genStaticCode := func(args completePluginArgs, generated *generatedFiles) {
 		genHotswapStaticPluginInit(args, generated)
 		genHotswapStaticPlugins(args, generated)
@@ -649,7 +650,7 @@ func genHotswapStaticPlugins(args completePluginArgs, generated *generatedFiles)
 
 func (wo *buildCmdT) buildPlugin() string {
 	if wo.goBuild {
-		fmt.Printf("Building plugin %s...\n", filepath.Base(wo.pluginDir))
+		fmt.Printf("Building plugin %q...\n", filepath.Base(wo.pluginDir))
 		if wo.verbose || wo.leaveTemps {
 			fmt.Println("TempDir: " + wo.tmpDir)
 		}
