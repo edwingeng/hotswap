@@ -221,33 +221,32 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 
 	now := time.Now().Format("02150405")
 	commitInfo := wo.commitInfo()
-	if wo.staticLinking {
+	if !wo.staticLinking {
+		wo.tmpDirName = fmt.Sprintf("%s-%s-%s", filepath.Base(wo.pluginDir), commitInfo, now)
+		wo.tmpDir = filepath.Join(filepath.Dir(wo.pluginDir), wo.tmpDirName)
+		wo.tmpPkgPath = path.Join(path.Dir(pkgPath), wo.tmpDirName)
+
+		if wo.include != "" {
+			if wo.rexInclude, err = regexp.Compile(wo.include); err != nil {
+				panic(fmt.Errorf("failed to compile the --include regular expression. err: %w", err))
+			}
+		}
+		if wo.exclude != "" {
+			if wo.rexExclude, err = regexp.Compile(wo.exclude); err != nil {
+				panic(fmt.Errorf("failed to compile the --exclude regular expression. err: %w", err))
+			}
+		}
+
+		if err := hutils.FindDirectory(wo.tmpDir, ""); err == nil {
+			if err := os.RemoveAll(wo.tmpDir); err != nil {
+				panic(err)
+			}
+		}
+	} else {
 		wo.tmpDirName = filepath.Base(wo.pluginDir)
 		wo.tmpDir = wo.pluginDir
 		wo.tmpPkgPath = wo.pluginPkgPath
-		goto next1
 	}
-	wo.tmpDirName = fmt.Sprintf("%s-%s-%s", filepath.Base(wo.pluginDir), commitInfo, now)
-	wo.tmpDir = filepath.Join(filepath.Dir(wo.pluginDir), wo.tmpDirName)
-	wo.tmpPkgPath = path.Join(path.Dir(pkgPath), wo.tmpDirName)
-
-	if wo.include != "" {
-		if wo.rexInclude, err = regexp.Compile(wo.include); err != nil {
-			panic(fmt.Errorf("failed to compile the --include regular expression. err: %w", err))
-		}
-	}
-	if wo.exclude != "" {
-		if wo.rexExclude, err = regexp.Compile(wo.exclude); err != nil {
-			panic(fmt.Errorf("failed to compile the --exclude regular expression. err: %w", err))
-		}
-	}
-
-	if err := hutils.FindDirectory(wo.tmpDir, ""); err == nil {
-		if err := os.RemoveAll(wo.tmpDir); err != nil {
-			panic(err)
-		}
-	}
-next1:
 
 	if !wo.goBuild {
 		wo.leaveTemps = true
@@ -264,14 +263,14 @@ next1:
 		select {
 		case x := <-chSignal:
 			signal.Reset(sigs...)
-			wo.removeTmpDir()
 			if x == syscall.SIGINT {
+				close(haltProgram)
 				go func() {
 					time.Sleep(time.Second)
 					fmt.Println("\nPress Ctrl-C again to terminate the program immediately.")
 				}()
-				close(haltProgram)
 			}
+			wo.removeTmpDir()
 		}
 	}()
 	defer func() {
@@ -289,7 +288,7 @@ next1:
 				"try the static linking mode (--staticLinking) instead.\n")
 			os.Exit(1)
 		}
-		if os.Getenv("hotswap:checkRequiredPluginFuncs") != "0" {
+		if v := os.Getenv("hotswap:checkRequiredPluginFuncs"); v != "false" && v != "0" {
 			parseRequiredPluginFuncs(wo.pluginDir, "")
 		}
 		outputFile = wo.buildPlugin()
@@ -303,10 +302,10 @@ next1:
 		timing.total = time.Since(timing.totalStart)
 		wo.outputTiming()
 	}
+	if wo.verbose && outputFile != "" {
+		fmt.Println()
+	}
 	if outputFile != "" {
-		if wo.verbose {
-			fmt.Println()
-		}
 		fmt.Println(outputFile)
 	}
 }
@@ -362,6 +361,7 @@ func (wo *buildCmdT) commitInfo() string {
 	if err != nil {
 		panic(err)
 	}
+	output1 = bytes.Trim(output1, "\r\n")
 
 	cmd2 := exec.Command("git", "log", "-1", "--format=%ct", "HEAD")
 	cmd2.Dir = wo.pluginDir
@@ -371,6 +371,10 @@ func (wo *buildCmdT) commitInfo() string {
 		panic(err)
 	}
 	output2 = bytes.Trim(output2, "\r\n")
+
+	if wo.verbose {
+		fmt.Printf("Commit info: %s, %s\n\n", output1, output2)
+	}
 
 	n, err := strconv.Atoi(string(output2))
 	if err != nil {
