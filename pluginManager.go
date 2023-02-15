@@ -58,17 +58,17 @@ func newPluginManager(log slog.Logger, newExt func() interface{}) *PluginManager
 	}
 }
 
-func (wo *PluginManager) addUnchanged(oldP *Plugin, note string) {
+func (pm *PluginManager) addUnchanged(oldP *Plugin, note string) {
 	newP := *oldP
 	newP.unchanged = true
 	newP.Note = note
 	newP.Refs.Inc()
-	wo.pluginMap[name2key(oldP.Name)] = &newP
+	pm.pluginMap[name2key(oldP.Name)] = &newP
 }
 
-func (wo *PluginManager) outputStats1(infoMap fileInfoMap) {
+func (pm *PluginManager) outputStats1(infoMap fileInfoMap) {
 	var a1, a2 []string
-	for _, p := range wo.pluginMap {
+	for _, p := range pm.pluginMap {
 		switch p.Note {
 		case "not reloadable":
 			a1 = append(a1, p.Name)
@@ -81,10 +81,10 @@ func (wo *PluginManager) outputStats1(infoMap fileInfoMap) {
 	str1 := strings.Join(a1, ", ")
 	str2 := strings.Join(a2, ", ")
 	str3 := strings.Join(infoMap.names(), ", ")
-	wo.Infof("<hotswap> not reloadable: [%s], unchanged: [%s], to be loaded: [%s]", str1, str2, str3)
+	pm.Infof("<hotswap> not reloadable: [%s], unchanged: [%s], to be loaded: [%s]", str1, str2, str3)
 }
 
-func (wo *PluginManager) loadPlugins(files []string, oldManager *PluginManager, data interface{}) (errRet error) {
+func (pm *PluginManager) loadPlugins(files []string, oldManager *PluginManager, data interface{}) (errRet error) {
 	var curFileInfo *fileInfo
 	defer func() {
 		if r := recover(); r != nil {
@@ -93,13 +93,13 @@ func (wo *PluginManager) loadPlugins(files []string, oldManager *PluginManager, 
 				pName = "." + curFileInfo.name
 			}
 			errRet = fmt.Errorf("<hotswap%s> panic: %+v\n%s", pName, r, debug.Stack())
-			wo.invokeEveryOnFree()
+			pm.invokeEveryOnFree()
 		} else if errRet != nil {
-			wo.invokeEveryOnFree()
+			pm.invokeEveryOnFree()
 		}
 	}()
 
-	if len(wo.pluginMap) != 0 {
+	if len(pm.pluginMap) != 0 {
 		return errors.New("never call loadPlugins twice")
 	}
 
@@ -120,47 +120,47 @@ func (wo *PluginManager) loadPlugins(files []string, oldManager *PluginManager, 
 
 	notReloadable := infoMap.removeNotReloadable(oldManager)
 	for k := range notReloadable {
-		wo.addUnchanged(oldManager.pluginMap[k], "not reloadable")
+		pm.addUnchanged(oldManager.pluginMap[k], "not reloadable")
 	}
 	unchanged := infoMap.removeUnchanged(oldManager)
 	for k := range unchanged {
-		wo.addUnchanged(oldManager.pluginMap[k], "unchanged")
+		pm.addUnchanged(oldManager.pluginMap[k], "unchanged")
 	}
-	if infoMap.Len()+len(wo.pluginMap) != len(files) {
-		return errors.New("infoMap.Len()+len(wo.pluginMap) != len(files)")
+	if infoMap.Len()+len(pm.pluginMap) != len(files) {
+		return errors.New("infoMap.Len()+len(pm.pluginMap) != len(files)")
 	}
 
-	wo.outputStats1(infoMap)
-	wo.when = time.Now()
+	pm.outputStats1(infoMap)
+	pm.when = time.Now()
 	for _, name := range infoMap.names() {
 		info := infoMap.m[name]
 		curFileInfo = info
-		if err = wo.loadPlugin(info, data); err != nil {
+		if err = pm.loadPlugin(info, data); err != nil {
 			return fmt.Errorf("failed to load the plugin %s. err: %w", info.name, err)
 		}
 	}
 	curFileInfo = nil
-	wo.panicTrigger(data)
+	pm.panicTrigger(data)
 
-	if err := wo.initDeps(); err != nil {
+	if err := pm.initDeps(); err != nil {
 		return err
 	}
-	if err := wo.invokeEveryOnLoad(data); err != nil {
+	if err := pm.invokeEveryOnLoad(data); err != nil {
 		return err
 	}
-	if err := wo.setupVault(); err != nil {
+	if err := pm.setupVault(); err != nil {
 		return err
 	}
-	if err := wo.invokeEveryOnInit(); err != nil {
+	if err := pm.invokeEveryOnInit(); err != nil {
 		return err
 	}
 
-	wo.panicTrigger(data)
+	pm.panicTrigger(data)
 	return nil
 }
 
-func (wo *PluginManager) copyPlugin(info *fileInfo) (string, error) {
-	tmpDir := filepath.Join(filepath.Dir(info.file), "tmp", wo.dirName)
+func (pm *PluginManager) copyPlugin(info *fileInfo) (string, error) {
+	tmpDir := filepath.Join(filepath.Dir(info.file), "tmp", pm.dirName)
 	if err := os.MkdirAll(tmpDir, 0744); err != nil {
 		return "", err
 	}
@@ -189,8 +189,8 @@ func makePluginFuncItemList(p *Plugin) []pluginFuncItem {
 	}
 }
 
-func (wo *PluginManager) loadPlugin(info *fileInfo, data interface{}) error {
-	actual, err := wo.copyPlugin(info)
+func (pm *PluginManager) loadPlugin(info *fileInfo, data interface{}) error {
+	actual, err := pm.copyPlugin(info)
 	if err != nil {
 		return err
 	}
@@ -199,12 +199,12 @@ func (wo *PluginManager) loadPlugin(info *fileInfo, data interface{}) error {
 	p.Name = info.name
 	p.File = info.file
 	p.FileSha1 = info.fileSha1
-	p.When = wo.when
+	p.When = pm.when
 	p.P, err = plugin.Open(actual)
 	if err != nil {
 		return err
 	}
-	wo.cbOpen(p, data)
+	pm.cbOpen(p, data)
 
 	var a = makePluginFuncItemList(p)
 	var missing []string
@@ -230,19 +230,19 @@ func (wo *PluginManager) loadPlugin(info *fileInfo, data interface{}) error {
 		return err
 	}
 
-	wo.pluginMap[name2key(p.Name)] = p
+	pm.pluginMap[name2key(p.Name)] = p
 	return nil
 }
 
-func (wo *PluginManager) initDeps() error {
-	keys := make([]string, 0, len(wo.pluginMap))
-	for k := range wo.pluginMap {
+func (pm *PluginManager) initDeps() error {
+	keys := make([]string, 0, len(pm.pluginMap))
+	for k := range pm.pluginMap {
 		keys = append(keys, k)
 	}
 
 	sort.Strings(keys)
 	for _, k := range keys {
-		p := wo.pluginMap[k]
+		p := pm.pluginMap[k]
 		if p.unchanged {
 			continue
 		}
@@ -269,7 +269,7 @@ func (wo *PluginManager) initDeps() error {
 			if field.Anonymous {
 				return fmt.Errorf("field of the Import() object cannot be anonymous. field: %s, plugin: %s", field.Name, p.Name)
 			}
-			dep, ok := wo.pluginMap[name2key(field.Name)]
+			dep, ok := pm.pluginMap[name2key(field.Name)]
 			if !ok {
 				return fmt.Errorf("unknown dependency: %s. plugin: %s", field.Name, p.Name)
 			}
@@ -290,11 +290,11 @@ func (wo *PluginManager) initDeps() error {
 		}
 	}
 
-	for _, p := range wo.pluginMap {
+	for _, p := range pm.pluginMap {
 		if len(p.Deps) == 0 {
 			continue
 		}
-		cyclicDeps := wo.checkCyclicDependency(p, make(map[*Plugin]struct{}))
+		cyclicDeps := pm.checkCyclicDependency(p, make(map[*Plugin]struct{}))
 		if len(cyclicDeps) != 0 {
 			var names []string
 			for _, p := range cyclicDeps {
@@ -304,21 +304,21 @@ func (wo *PluginManager) initDeps() error {
 		}
 	}
 
-	for _, p := range wo.pluginMap {
+	for _, p := range pm.pluginMap {
 		if p.unchanged {
 			for _, depName := range p.Deps {
-				if dep := wo.pluginMap[name2key(depName)]; !dep.unchanged {
+				if dep := pm.pluginMap[name2key(depName)]; !dep.unchanged {
 					return fmt.Errorf("%s was rebuilt while %s was not", dep.Name, p.Name)
 				}
 			}
 		}
 	}
 
-	wo.orderPlugins()
+	pm.orderPlugins()
 	return nil
 }
 
-func (wo *PluginManager) checkCyclicDependency(p *Plugin, visited map[*Plugin]struct{}) []*Plugin {
+func (pm *PluginManager) checkCyclicDependency(p *Plugin, visited map[*Plugin]struct{}) []*Plugin {
 	me := [1]*Plugin{p}
 	if _, ok := visited[p]; ok {
 		return me[:]
@@ -330,8 +330,8 @@ func (wo *PluginManager) checkCyclicDependency(p *Plugin, visited map[*Plugin]st
 	}()
 
 	for _, depName := range p.Deps {
-		dep := wo.pluginMap[name2key(depName)]
-		ret := wo.checkCyclicDependency(dep, visited)
+		dep := pm.pluginMap[name2key(depName)]
+		ret := pm.checkCyclicDependency(dep, visited)
 		if len(ret) > 0 {
 			return append(me[:], ret...)
 		}
@@ -340,12 +340,12 @@ func (wo *PluginManager) checkCyclicDependency(p *Plugin, visited map[*Plugin]st
 	return nil
 }
 
-func (wo *PluginManager) orderPlugins() {
-	n := len(wo.pluginMap)
+func (pm *PluginManager) orderPlugins() {
+	n := len(pm.pluginMap)
 	a := make([]*Plugin, 0, n)
 	m := make(map[*Plugin]struct{}, n)
 	var keys []string
-	for k, p := range wo.pluginMap {
+	for k, p := range pm.pluginMap {
 		if len(p.Deps) == 0 {
 			a = append(a, p)
 			m[p] = struct{}{}
@@ -357,17 +357,17 @@ func (wo *PluginManager) orderPlugins() {
 	sort.Strings(keys)
 	for i := 0; i < n+1; i++ {
 		if len(a) == n {
-			wo.ordered = a
+			pm.ordered = a
 			return
 		}
 		for _, k := range keys {
-			p := wo.pluginMap[k]
+			p := pm.pluginMap[k]
 			if _, ok := m[p]; ok {
 				continue
 			}
 			var counter int
 			for _, depName := range p.Deps {
-				dep := wo.pluginMap[name2key(depName)]
+				dep := pm.pluginMap[name2key(depName)]
 				if _, ok := m[dep]; ok {
 					counter++
 				} else {
@@ -384,18 +384,18 @@ func (wo *PluginManager) orderPlugins() {
 	panic("something is wrong with PluginManager.orderedPlugins()")
 }
 
-func (wo *PluginManager) invokeEveryOnLoad(data interface{}) error {
+func (pm *PluginManager) invokeEveryOnLoad(data interface{}) error {
 	invokeImpl := func(p *Plugin) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
 			}
 		}()
-		wo.Debugf("<hotswap> invoking %s.OnLoad", p.Name)
+		pm.Debugf("<hotswap> invoking %s.OnLoad", p.Name)
 		return p.fOnLoad(data)
 	}
 
-	for _, p := range wo.ordered {
+	for _, p := range pm.ordered {
 		if p.unchanged {
 			continue
 		}
@@ -407,18 +407,18 @@ func (wo *PluginManager) invokeEveryOnLoad(data interface{}) error {
 	return nil
 }
 
-func (wo *PluginManager) invokeEveryOnInit() error {
+func (pm *PluginManager) invokeEveryOnInit() error {
 	invokeImpl := func(p *Plugin) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
 			}
 		}()
-		wo.Debugf("<hotswap> invoking %s.OnInit", p.Name)
-		return p.fOnInit(&wo.Vault)
+		pm.Debugf("<hotswap> invoking %s.OnInit", p.Name)
+		return p.fOnInit(&pm.Vault)
 	}
 
-	for _, p := range wo.ordered {
+	for _, p := range pm.ordered {
 		if p.unchanged {
 			continue
 		}
@@ -430,23 +430,23 @@ func (wo *PluginManager) invokeEveryOnInit() error {
 	return nil
 }
 
-func (wo *PluginManager) setupVault() error {
-	for i, p := range wo.ordered {
+func (pm *PluginManager) setupVault() error {
+	for i, p := range pm.ordered {
 		liveFuncs := p.hotswapLiveFuncs()
 		if isNil(liveFuncs) {
 			return fmt.Errorf("something is wrong with HotswapLiveFuncs(). plugin: %s", p.Name)
 		}
 		for k, v := range liveFuncs {
-			if _, ok := wo.LiveFuncs[k]; !ok {
-				wo.LiveFuncs[k] = v
+			if _, ok := pm.LiveFuncs[k]; !ok {
+				pm.LiveFuncs[k] = v
 				continue
 			}
 
 			var another string
 			for j := 0; j < i; j++ {
-				m := wo.ordered[j].hotswapLiveFuncs()
+				m := pm.ordered[j].hotswapLiveFuncs()
 				if _, ok := m[k]; ok {
-					another = wo.ordered[j].Name
+					another = pm.ordered[j].Name
 					break
 				}
 			}
@@ -455,22 +455,22 @@ func (wo *PluginManager) setupVault() error {
 		}
 	}
 
-	for i, p := range wo.ordered {
+	for i, p := range pm.ordered {
 		liveTypes := p.hotswapLiveTypes()
 		if isNil(liveTypes) {
 			return fmt.Errorf("something is wrong with HotswapLiveTypes(). plugin: %s", p.Name)
 		}
 		for k, v := range liveTypes {
-			if _, ok := wo.LiveTypes[k]; !ok {
-				wo.LiveTypes[k] = v
+			if _, ok := pm.LiveTypes[k]; !ok {
+				pm.LiveTypes[k] = v
 				continue
 			}
 
 			var another string
 			for j := 0; j < i; j++ {
-				m := wo.ordered[j].hotswapLiveTypes()
+				m := pm.ordered[j].hotswapLiveTypes()
 				if _, ok := m[k]; ok {
-					another = wo.ordered[j].Name
+					another = pm.ordered[j].Name
 					break
 				}
 			}
@@ -482,73 +482,73 @@ func (wo *PluginManager) setupVault() error {
 	return nil
 }
 
-func (wo *PluginManager) invokeEveryOnFree() {
+func (pm *PluginManager) invokeEveryOnFree() {
 	invokeImpl := func(p *Plugin) {
 		if v := p.Refs.Dec(); v > 0 {
 			return
 		}
 		defer func() {
 			if r := recover(); r != nil {
-				wo.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
+				pm.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
 			}
 		}()
-		wo.Debugf("<hotswap> invoking %s.OnFree", p.Name)
+		pm.Debugf("<hotswap> invoking %s.OnFree", p.Name)
 		p.freeOnce.Do(func() {
 			p.fOnFree()
 		})
 	}
 
-	all := wo.Plugins()
+	all := pm.Plugins()
 	if len(all) > 0 {
 		for i := len(all) - 1; i >= 0; i-- {
 			invokeImpl(all[i])
 		}
 	} else {
-		for _, p := range wo.pluginMap {
+		for _, p := range pm.pluginMap {
 			invokeImpl(p)
 		}
 	}
 }
 
-func (wo *PluginManager) FindPlugin(name string) *Plugin {
-	return wo.pluginMap[name2key(name)]
+func (pm *PluginManager) FindPlugin(name string) *Plugin {
+	return pm.pluginMap[name2key(name)]
 }
 
-func (wo *PluginManager) Plugins() []*Plugin {
-	return wo.ordered
+func (pm *PluginManager) Plugins() []*Plugin {
+	return pm.ordered
 }
 
-func (wo *PluginManager) InvokeEach(name string, params ...interface{}) {
+func (pm *PluginManager) InvokeEach(name string, params ...interface{}) {
 	invokeImpl := func(p *Plugin) {
 		defer func() {
 			if r := recover(); r != nil {
-				wo.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
+				pm.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
 			}
 		}()
 		if _, err := p.InvokeFunc(name, params...); err != nil {
-			wo.Error(err)
+			pm.Error(err)
 		}
 	}
 
-	all := wo.Plugins()
+	all := pm.Plugins()
 	for _, p := range all {
 		invokeImpl(p)
 	}
 }
 
-func (wo *PluginManager) InvokeEachBackward(name string, params ...interface{}) {
+func (pm *PluginManager) InvokeEachBackward(name string, params ...interface{}) {
 	invokeImpl := func(p *Plugin) {
 		defer func() {
 			if r := recover(); r != nil {
-				wo.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
+				pm.Errorf("<hotswap:%s> panic: %+v\n%s", p.Name, r, debug.Stack())
 			}
 		}()
 		if _, err := p.InvokeFunc(name, params...); err != nil {
-			wo.Error(err)
+			pm.Error(err)
 		}
 	}
 
-	all := wo.Plugins()
+	all := pm.Plugins()
 	for i := len(all) - 1; i >= 0; i-- {
 		invokeImpl(all[i])
 	}

@@ -62,29 +62,29 @@ func NewPluginManagerSwapper(pluginDir string, opts ...Option) *PluginManagerSwa
 	return swapper
 }
 
-func (wo *PluginManagerSwapper) Current() *PluginManager {
-	v := wo.current.Load()
+func (sw *PluginManagerSwapper) Current() *PluginManager {
+	v := sw.current.Load()
 	pluginManager, _ := v.(*PluginManager)
 	return pluginManager
 }
 
-func (wo *PluginManagerSwapper) LoadPlugins(data interface{}) (Details, error) {
-	wo.mu.Lock()
-	defer wo.mu.Unlock()
+func (sw *PluginManagerSwapper) LoadPlugins(data interface{}) (Details, error) {
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
 
-	cbs := []ReloadCallback{wo.opts.reloadCallback}
-	if wo.staticPlugins != nil {
-		return wo.loadStaticPlugins(data, cbs)
+	cbs := []ReloadCallback{sw.opts.reloadCallback}
+	if sw.staticPlugins != nil {
+		return sw.loadStaticPlugins(data, cbs)
 	}
 
-	return wo.loadPluginsImpl(data, cbs)
+	return sw.loadPluginsImpl(data, cbs)
 }
 
-func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCallback) (Details, error) {
+func (sw *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCallback) (Details, error) {
 	var absDir string
-	if err := hutils.FindDirectory(wo.opts.pluginDir, "pluginDir"); err != nil {
+	if err := hutils.FindDirectory(sw.opts.pluginDir, "pluginDir"); err != nil {
 		return nil, err
-	} else if absDir, err = filepath.Abs(wo.opts.pluginDir); err != nil {
+	} else if absDir, err = filepath.Abs(sw.opts.pluginDir); err != nil {
 		return nil, err
 	}
 
@@ -99,8 +99,8 @@ func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCa
 			continue
 		}
 		if strings.HasSuffix(fi.Name(), hutils.FileNameExt) {
-			if len(wo.opts.whitelist) > 0 {
-				if name := pluginName(fi.Name()); wo.opts.whitelist.Contains(name) {
+			if len(sw.opts.whitelist) > 0 {
+				if name := pluginName(fi.Name()); sw.opts.whitelist.Contains(name) {
 					found[name] = struct{}{}
 				} else {
 					continue
@@ -109,10 +109,10 @@ func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCa
 			files = append(files, filepath.Join(absDir, fi.Name()))
 		}
 	}
-	if len(wo.opts.whitelist) > 0 {
-		if len(found) != len(wo.opts.whitelist) {
+	if len(sw.opts.whitelist) > 0 {
+		if len(found) != len(sw.opts.whitelist) {
 			var missing []string
-			for _, v := range wo.opts.whitelist {
+			for _, v := range sw.opts.whitelist {
 				if _, ok := found[v]; !ok {
 					missing = append(missing, v)
 				}
@@ -121,16 +121,16 @@ func (wo *PluginManagerSwapper) loadPluginsImpl(data interface{}, cbs []ReloadCa
 		}
 	}
 
-	return wo.loadPluginFiles(files, data, cbs)
+	return sw.loadPluginFiles(files, data, cbs)
 }
 
-func (wo *PluginManagerSwapper) loadPluginFiles(files []string, data interface{}, cbs []ReloadCallback) (Details, error) {
+func (sw *PluginManagerSwapper) loadPluginFiles(files []string, data interface{}, cbs []ReloadCallback) (Details, error) {
 	if len(files) == 0 {
 		return nil, nil
 	}
 
-	oldManager := wo.Current()
-	newManager := newPluginManager(wo.Logger, wo.opts.newExt)
+	oldManager := sw.Current()
+	newManager := newPluginManager(sw.Logger, sw.opts.newExt)
 	if err := newManager.loadPlugins(files, oldManager, data); err != nil {
 		return nil, err
 	}
@@ -150,15 +150,15 @@ func (wo *PluginManagerSwapper) loadPluginFiles(files []string, data interface{}
 	if oldManager != nil {
 		go func() {
 			delay := minFreeDelay
-			if minFreeDelay < wo.opts.freeDelay {
-				delay = wo.opts.freeDelay
+			if minFreeDelay < sw.opts.freeDelay {
+				delay = sw.opts.freeDelay
 			}
 			time.Sleep(delay)
 			oldManager.invokeEveryOnFree()
 		}()
 	}
 
-	wo.current.Store(newManager)
+	sw.current.Store(newManager)
 	return result, nil
 }
 
@@ -183,34 +183,34 @@ func invokeReloadCallbacks(cbs []ReloadCallback, newManager, oldManager *PluginM
 	return nil
 }
 
-func (wo *PluginManagerSwapper) Reload(data interface{}) (Details, error) {
-	return wo.ReloadWithCallback(data, nil)
+func (sw *PluginManagerSwapper) Reload(data interface{}) (Details, error) {
+	return sw.ReloadWithCallback(data, nil)
 }
 
-func (wo *PluginManagerSwapper) ReloadWithCallback(data interface{}, extra ReloadCallback) (Details, error) {
-	if wo.staticPlugins != nil {
+func (sw *PluginManagerSwapper) ReloadWithCallback(data interface{}, extra ReloadCallback) (Details, error) {
+	if sw.staticPlugins != nil {
 		return nil, errors.New("running under static linking mode")
 	}
 
-	wo.mu.Lock()
-	defer wo.mu.Unlock()
-	cbs := []ReloadCallback{wo.opts.reloadCallback}
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+	cbs := []ReloadCallback{sw.opts.reloadCallback}
 	if extra != nil {
 		cbs = append(cbs, extra)
 	}
-	details, err := wo.loadPluginsImpl(data, cbs)
+	details, err := sw.loadPluginsImpl(data, cbs)
 	if err == nil {
-		atomic.AddInt64(&wo.reloadCounter, 1)
+		atomic.AddInt64(&sw.reloadCounter, 1)
 	}
 	return details, err
 }
 
-func (wo *PluginManagerSwapper) ReloadCounter() int64 {
-	return atomic.LoadInt64(&wo.reloadCounter)
+func (sw *PluginManagerSwapper) ReloadCounter() int64 {
+	return atomic.LoadInt64(&sw.reloadCounter)
 }
 
-func (wo *PluginManagerSwapper) StaticLinkingMode() bool {
-	return wo.staticPlugins != nil
+func (sw *PluginManagerSwapper) StaticLinkingMode() bool {
+	return sw.staticPlugins != nil
 }
 
 type Details map[string]string

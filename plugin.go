@@ -70,19 +70,19 @@ func isNil(v interface{}) bool {
 	}
 }
 
-func (wo *Plugin) Lookup(symName string, out interface{}) error {
+func (pl *Plugin) Lookup(symName string, out interface{}) error {
 	if symName == "" {
-		return fmt.Errorf("symName cannot be empty. plugin: %s", wo.Name)
+		return fmt.Errorf("symName cannot be empty. plugin: %s", pl.Name)
 	}
 	if isNil(out) {
-		return fmt.Errorf("out cannot be nil. plugin: %s, symName: %s", wo.Name, symName)
+		return fmt.Errorf("out cannot be nil. plugin: %s, symName: %s", pl.Name, symName)
 	}
 
 	outVal := reflect.ValueOf(out)
 	if k := outVal.Type().Kind(); k != reflect.Ptr {
-		return fmt.Errorf("out must be a pointer. plugin: %s, symName: %s", wo.Name, symName)
+		return fmt.Errorf("out must be a pointer. plugin: %s, symName: %s", pl.Name, symName)
 	}
-	sym, err := wo.P.Lookup(symName)
+	sym, err := pl.P.Lookup(symName)
 	if err != nil {
 		return ErrNotExist
 	}
@@ -100,33 +100,33 @@ func (wo *Plugin) Lookup(symName string, out interface{}) error {
 		return nil
 	default:
 		return fmt.Errorf("failed to assign %s to out. plugin: %s, symTyp: %s, outTyp: %s",
-			symName, wo.Name, symTyp.String(), outVal.Type().String())
+			symName, pl.Name, symTyp.String(), outVal.Type().String())
 	}
 }
 
-func (wo *Plugin) invokeExport() (_ interface{}, err error) {
+func (pl *Plugin) invokeExport() (_ interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", wo.Name, r, debug.Stack())
+			err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", pl.Name, r, debug.Stack())
 		}
 	}()
-	return wo.fExport(), nil
+	return pl.fExport(), nil
 }
 
-func (wo *Plugin) invokeImport() (_ interface{}, err error) {
+func (pl *Plugin) invokeImport() (_ interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", wo.Name, r, debug.Stack())
+			err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", pl.Name, r, debug.Stack())
 		}
 	}()
-	return wo.fImport(), nil
+	return pl.fImport(), nil
 }
 
-func (wo *Plugin) invokeReloadable() (_ bool, err error) {
+func (pl *Plugin) invokeReloadable() (_ bool, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", wo.Name, r, debug.Stack())
+			err = fmt.Errorf("<hotswap:%s> panic: %+v\n%s", pl.Name, r, debug.Stack())
 		}
 	}()
-	return wo.fReloadable(), nil
+	return pl.fReloadable(), nil
 }

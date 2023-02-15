@@ -140,10 +140,10 @@ type buildCmdT struct {
 	rexExclude *regexp.Regexp
 }
 
-func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
+func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 	defer func() {
 		if r := recover(); r != nil {
-			if wo.debug {
+			if bc.debug {
 				_, _ = fmt.Fprintf(os.Stderr, "%s\n\n%s", r, debug.Stack())
 			} else {
 				_, _ = os.Stderr.WriteString(fmt.Sprintln(r))
@@ -157,24 +157,24 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	wo.livePrefix = strings.ToLower(strings.TrimSpace(wo.livePrefix))
-	if wo.livePrefix == "" {
+	bc.livePrefix = strings.ToLower(strings.TrimSpace(bc.livePrefix))
+	if bc.livePrefix == "" {
 		panic("--livePrefix cannot be empty")
 	}
 
 	timing.totalStart = time.Now()
-	wo.pluginDir = args[0]
-	wo.outputDir = args[1]
-	if err := hutils.FindDirectory(wo.pluginDir, "<pluginDir>"); err != nil {
+	bc.pluginDir = args[0]
+	bc.outputDir = args[1]
+	if err := hutils.FindDirectory(bc.pluginDir, "<pluginDir>"); err != nil {
 		panic(err)
 	}
-	if err := hutils.FindDirectory(wo.outputDir, "<outputDir>"); err != nil {
+	if err := hutils.FindDirectory(bc.outputDir, "<outputDir>"); err != nil {
 		if !os.IsNotExist(err) {
 			panic(err)
-		} else if wo.staticLinking {
+		} else if bc.staticLinking {
 			panic(err)
 		}
-		if err := os.MkdirAll(wo.outputDir, 0744); err != nil {
+		if err := os.MkdirAll(bc.outputDir, 0744); err != nil {
 			panic(err)
 		}
 	}
@@ -189,66 +189,66 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	absDir1, err := filepath.Abs(wo.pluginDir)
+	absDir1, err := filepath.Abs(bc.pluginDir)
 	if err != nil {
 		panic(err)
 	}
-	absDir2, err := filepath.Abs(wo.outputDir)
+	absDir2, err := filepath.Abs(bc.outputDir)
 	if err != nil {
 		panic(err)
 	}
-	wo.pluginDir = absDir1
-	wo.outputDir = absDir2
+	bc.pluginDir = absDir1
+	bc.outputDir = absDir2
 
-	if wo.staticLinking {
-		if wo.outputDir == wo.pluginDir {
+	if bc.staticLinking {
+		if bc.outputDir == bc.pluginDir {
 			panic("pluginDir and outputDir must not be identical")
 		}
-		if rel, err := filepath.Rel(wo.pluginDir, wo.outputDir); err == nil &&
+		if rel, err := filepath.Rel(bc.pluginDir, bc.outputDir); err == nil &&
 			!strings.HasPrefix(rel, "..") {
 			panic("outputDir must not be a subdirectory of pluginDir")
 		}
 	}
 
-	_, pkgPath, err := hutils.PackageFromDirectory(wo.pluginDir)
+	_, pkgPath, err := hutils.PackageFromDirectory(bc.pluginDir)
 	if err != nil {
 		panic(fmt.Errorf("failed to determine the package path. err: %v", err))
 	}
-	wo.pluginPkgPath = pkgPath
+	bc.pluginPkgPath = pkgPath
 
 	now := time.Now().Format("02150405")
-	commitInfo := wo.commitInfo()
-	if !wo.staticLinking {
-		wo.tmpDirName = fmt.Sprintf("%s-%s-%s", filepath.Base(wo.pluginDir), commitInfo, now)
-		wo.tmpDir = filepath.Join(filepath.Dir(wo.pluginDir), wo.tmpDirName)
-		wo.tmpPkgPath = path.Join(path.Dir(pkgPath), wo.tmpDirName)
+	commitInfo := bc.commitInfo()
+	if !bc.staticLinking {
+		bc.tmpDirName = fmt.Sprintf("%s-%s-%s", filepath.Base(bc.pluginDir), commitInfo, now)
+		bc.tmpDir = filepath.Join(filepath.Dir(bc.pluginDir), bc.tmpDirName)
+		bc.tmpPkgPath = path.Join(path.Dir(pkgPath), bc.tmpDirName)
 
-		if wo.include != "" {
-			if wo.rexInclude, err = regexp.Compile(wo.include); err != nil {
+		if bc.include != "" {
+			if bc.rexInclude, err = regexp.Compile(bc.include); err != nil {
 				panic(fmt.Errorf("failed to compile the --include regular expression. err: %w", err))
 			}
 		}
-		if wo.exclude != "" {
-			if wo.rexExclude, err = regexp.Compile(wo.exclude); err != nil {
+		if bc.exclude != "" {
+			if bc.rexExclude, err = regexp.Compile(bc.exclude); err != nil {
 				panic(fmt.Errorf("failed to compile the --exclude regular expression. err: %w", err))
 			}
 		}
 
-		if err := hutils.FindDirectory(wo.tmpDir, ""); err == nil {
-			if err := os.RemoveAll(wo.tmpDir); err != nil {
+		if err := hutils.FindDirectory(bc.tmpDir, ""); err == nil {
+			if err := os.RemoveAll(bc.tmpDir); err != nil {
 				panic(err)
 			}
 		}
 	} else {
-		wo.tmpDirName = filepath.Base(wo.pluginDir)
-		wo.tmpDir = wo.pluginDir
-		wo.tmpPkgPath = wo.pluginPkgPath
+		bc.tmpDirName = filepath.Base(bc.pluginDir)
+		bc.tmpDir = bc.pluginDir
+		bc.tmpPkgPath = bc.pluginPkgPath
 	}
 
-	if !wo.goBuild {
-		wo.leaveTemps = true
-	} else if wo.staticLinking {
-		wo.leaveTemps = true
+	if !bc.goBuild {
+		bc.leaveTemps = true
+	} else if bc.staticLinking {
+		bc.leaveTemps = true
 	}
 
 	chSignal := make(chan os.Signal, 1)
@@ -267,7 +267,7 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 					fmt.Println("\nPress Ctrl-C again to terminate the program immediately.")
 				}()
 			}
-			wo.removeTmpDir()
+			bc.removeTmpDir()
 		}
 	}()
 	defer func() {
@@ -279,27 +279,27 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 	}()
 
 	var outputFile string
-	if !wo.staticLinking {
+	if !bc.staticLinking {
 		if runtime.GOOS == "windows" {
 			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present, " +
 				"try the static linking mode (--staticLinking) instead.\n")
 			os.Exit(1)
 		}
 		if v := os.Getenv("hotswap:checkRequiredPluginFuncs"); v != "false" && v != "0" {
-			parseRequiredPluginFuncs(wo.pluginDir, "")
+			parseRequiredPluginFuncs(bc.pluginDir, "")
 		}
-		outputFile = wo.buildPlugin()
-	} else if wo.cleanOnly {
-		removeStaticFiles(buildCompletePluginArgs(wo, false, true, nil))
+		outputFile = bc.buildPlugin()
+	} else if bc.cleanOnly {
+		removeStaticFiles(buildCompletePluginArgs(bc, false, true, nil))
 	} else {
-		wo.genStaticPlugin()
+		bc.genStaticPlugin()
 	}
 
-	if wo.verbose {
+	if bc.verbose {
 		timing.total = time.Since(timing.totalStart)
-		wo.outputTiming()
+		bc.outputTiming()
 	}
-	if wo.verbose && outputFile != "" {
+	if bc.verbose && outputFile != "" {
 		fmt.Println()
 	}
 	if outputFile != "" {
@@ -307,7 +307,7 @@ func (wo *buildCmdT) execute(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (wo *buildCmdT) outputTiming() {
+func (bc *buildCmdT) outputTiming() {
 	fmt.Println()
 	fmt.Println("Timing:")
 	fmt.Println(strings.Repeat("=", 30))
@@ -330,8 +330,8 @@ func (wo *buildCmdT) outputTiming() {
 		{Title: build, Duration: timing.build},
 		{Title: total, Duration: timing.total},
 	}
-	if wo.staticLinking {
-		if wo.cleanOnly {
+	if bc.staticLinking {
+		if bc.cleanOnly {
 			a = []timingItem{a[1], a[3]}
 		} else {
 			a = []timingItem{a[3]}
@@ -344,15 +344,15 @@ func (wo *buildCmdT) outputTiming() {
 	}
 }
 
-func (wo *buildCmdT) removeTmpDir() {
-	if !wo.leaveTemps {
-		_ = os.RemoveAll(wo.tmpDir)
+func (bc *buildCmdT) removeTmpDir() {
+	if !bc.leaveTemps {
+		_ = os.RemoveAll(bc.tmpDir)
 	}
 }
 
-func (wo *buildCmdT) commitInfo() string {
+func (bc *buildCmdT) commitInfo() string {
 	cmd1 := exec.Command("git", "log", "-1", "--format=%H", "HEAD")
-	cmd1.Dir = wo.pluginDir
+	cmd1.Dir = bc.pluginDir
 	cmd1.Stderr = os.Stderr
 	output1, err := cmd1.Output()
 	if err != nil {
@@ -361,7 +361,7 @@ func (wo *buildCmdT) commitInfo() string {
 	output1 = bytes.Trim(output1, "\r\n")
 
 	cmd2 := exec.Command("git", "log", "-1", "--format=%ct", "HEAD")
-	cmd2.Dir = wo.pluginDir
+	cmd2.Dir = bc.pluginDir
 	cmd2.Stderr = os.Stderr
 	output2, err := cmd2.Output()
 	if err != nil {
@@ -369,7 +369,7 @@ func (wo *buildCmdT) commitInfo() string {
 	}
 	output2 = bytes.Trim(output2, "\r\n")
 
-	if wo.verbose {
+	if bc.verbose {
 		fmt.Printf("Commit info: %s, %s\n\n", output1, output2)
 	}
 
@@ -381,13 +381,13 @@ func (wo *buildCmdT) commitInfo() string {
 	return fmt.Sprintf("%s-%s", t, output1[:8])
 }
 
-func (wo *buildCmdT) genStaticPlugin() {
-	fmt.Printf("Generating static code for plugin %q...\n", filepath.Base(wo.pluginDir))
+func (bc *buildCmdT) genStaticPlugin() {
+	fmt.Printf("Generating static code for plugin %q...\n", filepath.Base(bc.pluginDir))
 	genStaticCode := func(args completePluginArgs, generated *generatedFiles) {
 		genHotswapStaticPluginInit(args, generated)
 		genHotswapStaticPlugins(args, generated)
 	}
-	completePlugin(buildCompletePluginArgs(wo, true, true, genStaticCode))
+	completePlugin(buildCompletePluginArgs(bc, true, true, genStaticCode))
 }
 
 func countPluginInitFiles(args completePluginArgs) int {
@@ -647,25 +647,25 @@ func genHotswapStaticPlugins(args completePluginArgs, generated *generatedFiles)
 	generated.add(file, true)
 }
 
-func (wo *buildCmdT) buildPlugin() string {
-	if wo.goBuild {
-		fmt.Printf("Building plugin %q...\n", filepath.Base(wo.pluginDir))
-		if wo.verbose || wo.leaveTemps {
-			fmt.Println("TempDir: " + wo.tmpDir)
+func (bc *buildCmdT) buildPlugin() string {
+	if bc.goBuild {
+		fmt.Printf("Building plugin %q...\n", filepath.Base(bc.pluginDir))
+		if bc.verbose || bc.leaveTemps {
+			fmt.Println("TempDir: " + bc.tmpDir)
 		}
 	} else {
-		fmt.Println(wo.tmpDir)
+		fmt.Println(bc.tmpDir)
 	}
 
 	timing.copyFilesStart = time.Now()
-	files := wo.collectFiles()
-	wo.copyFiles(files)
+	files := bc.collectFiles()
+	bc.copyFiles(files)
 	timing.copyFiles = time.Since(timing.copyFilesStart)
 
-	completePlugin(buildCompletePluginArgs(wo, false, false, nil))
+	completePlugin(buildCompletePluginArgs(bc, false, false, nil))
 
-	outputFileName := filepath.Base(wo.pluginDir) + hutils.FileNameExt
-	outputFile := filepath.Join(wo.outputDir, outputFileName)
+	outputFileName := filepath.Base(bc.pluginDir) + hutils.FileNameExt
+	outputFile := filepath.Join(bc.outputDir, outputFileName)
 
 	var args []string
 	args = append(args, "build")
@@ -673,15 +673,15 @@ func (wo *buildCmdT) buildPlugin() string {
 	args = append(args, "-buildmode=plugin")
 	args = append(args, "-o", outputFile)
 	args = append(args, g.BuildFlags...)
-	if wo.verbose {
+	if bc.verbose {
 		fmt.Println()
 		fmt.Println("Command: go " + strings.Join(args, " "))
-		if !wo.goBuild {
+		if !bc.goBuild {
 			fmt.Println("\nSkip building.")
 			return ""
 		}
 	} else {
-		if !wo.goBuild {
+		if !bc.goBuild {
 			return ""
 		}
 	}
@@ -692,7 +692,7 @@ func (wo *buildCmdT) buildPlugin() string {
 	}()
 
 	goBuild := exec.Command("go", args...)
-	goBuild.Dir = wo.tmpDir
+	goBuild.Dir = bc.tmpDir
 	goBuild.Stdout = os.Stdout
 	goBuild.Stderr = os.Stderr
 	goBuild.Env = append(os.Environ(), "GO111MODULE=on")
@@ -703,16 +703,16 @@ func (wo *buildCmdT) buildPlugin() string {
 	return outputFile
 }
 
-func (wo *buildCmdT) collectFiles() []string {
+func (bc *buildCmdT) collectFiles() []string {
 	var rexMatch func(path string) bool
 	switch {
-	case wo.rexInclude != nil && wo.rexExclude != nil:
+	case bc.rexInclude != nil && bc.rexExclude != nil:
 		rexMatch = func(path string) bool {
-			return wo.rexInclude.MatchString(path) && !wo.rexExclude.MatchString(path)
+			return bc.rexInclude.MatchString(path) && !bc.rexExclude.MatchString(path)
 		}
-	case wo.rexInclude != nil:
+	case bc.rexInclude != nil:
 		rexMatch = func(path string) bool {
-			return wo.rexInclude.MatchString(path)
+			return bc.rexInclude.MatchString(path)
 		}
 	default:
 		rexMatch = func(path string) bool {
@@ -721,16 +721,16 @@ func (wo *buildCmdT) collectFiles() []string {
 	}
 
 	files := make([]string, 0, 1024)
-	err := filepath.WalkDir(wo.pluginDir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(bc.pluginDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(wo.pluginDir, path)
+		rel, err := filepath.Rel(bc.pluginDir, path)
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			return os.MkdirAll(filepath.Join(wo.tmpDir, rel), 0744)
+			return os.MkdirAll(filepath.Join(bc.tmpDir, rel), 0744)
 		}
 
 		switch {
@@ -754,16 +754,16 @@ func (wo *buildCmdT) collectFiles() []string {
 	return files
 }
 
-func (wo *buildCmdT) copyFiles(files []string) {
+func (bc *buildCmdT) copyFiles(files []string) {
 	rexPkg := regexp.MustCompile(`(?m)^package\s+\S+`)
-	oldImportPath1 := []byte(`"` + wo.pluginPkgPath + `"`)
-	newImportPath1 := []byte(`"` + wo.tmpPkgPath + `"`)
-	oldImportPath2 := []byte(`"` + wo.pluginPkgPath + `/`)
-	newImportPath2 := []byte(`"` + wo.tmpPkgPath + `/`)
-	oldImportPath3 := []byte("`" + wo.pluginPkgPath + "`")
-	newImportPath3 := []byte("`" + wo.tmpPkgPath + "`")
-	oldImportPath4 := []byte("`" + wo.pluginPkgPath + "/")
-	newImportPath4 := []byte("`" + wo.tmpPkgPath + "/")
+	oldImportPath1 := []byte(`"` + bc.pluginPkgPath + `"`)
+	newImportPath1 := []byte(`"` + bc.tmpPkgPath + `"`)
+	oldImportPath2 := []byte(`"` + bc.pluginPkgPath + `/`)
+	newImportPath2 := []byte(`"` + bc.tmpPkgPath + `/`)
+	oldImportPath3 := []byte("`" + bc.pluginPkgPath + "`")
+	newImportPath3 := []byte("`" + bc.tmpPkgPath + "`")
+	oldImportPath4 := []byte("`" + bc.pluginPkgPath + "/")
+	newImportPath4 := []byte("`" + bc.tmpPkgPath + "/")
 
 	replaceCode := func(rel string, data1 []byte) []byte {
 		if filepath.Dir(rel) == "." {
@@ -810,7 +810,7 @@ func (wo *buildCmdT) copyFiles(files []string) {
 					return
 				}
 
-				abs := filepath.Join(wo.pluginDir, rel)
+				abs := filepath.Join(bc.pluginDir, rel)
 				data1, err := ioutil.ReadFile(abs)
 				if err != nil {
 					reportErr(err)
@@ -820,7 +820,7 @@ func (wo *buildCmdT) copyFiles(files []string) {
 				if strings.HasSuffix(rel, ".go") {
 					data9 = replaceCode(rel, data1)
 				}
-				tmpFile := filepath.Join(wo.tmpDir, rel)
+				tmpFile := filepath.Join(bc.tmpDir, rel)
 				err = ioutil.WriteFile(tmpFile, data9, 0644)
 				if err != nil {
 					reportErr(err)
@@ -843,19 +843,19 @@ type generatedFiles struct {
 	files map[string]bool
 }
 
-func (wo *generatedFiles) add(file string, outside bool) {
-	wo.mu.Lock()
-	wo.files[file] = outside
-	wo.mu.Unlock()
+func (gf *generatedFiles) add(file string, outside bool) {
+	gf.mu.Lock()
+	gf.files[file] = outside
+	gf.mu.Unlock()
 }
 
-func (wo *generatedFiles) snapshot() map[string]bool {
-	wo.mu.Lock()
+func (gf *generatedFiles) snapshot() map[string]bool {
+	gf.mu.Lock()
 	m := make(map[string]bool)
-	for k, v := range wo.files {
+	for k, v := range gf.files {
 		m[k] = v
 	}
-	wo.mu.Unlock()
+	gf.mu.Unlock()
 	return m
 }
 

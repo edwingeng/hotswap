@@ -77,8 +77,8 @@ type live_jobFire struct {
 	N int
 }
 
-func (wo *live_jobFire) Handle(pluginName string, compileTimeString string) error {
-	str := strings.TrimSpace(strings.Repeat("Bang! ", wo.N))
+func (jf *live_jobFire) Handle(pluginName string, compileTimeString string) error {
+	str := strings.TrimSpace(strings.Repeat("Bang! ", jf.N))
 	g.Logger.Infof("<%s.%s> %s. reloadCounter: %v",
 		pluginName, compileTimeString, str, g.PluginManagerSwapper.ReloadCounter())
 	return nil

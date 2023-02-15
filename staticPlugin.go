@@ -41,7 +41,7 @@ type StaticPlugin struct {
 	PluginFuncs
 }
 
-func (wo *PluginManager) loadStaticPlugins(staticPlugins map[string]*StaticPlugin, data interface{}) (errRet error) {
+func (pm *PluginManager) loadStaticPlugins(staticPlugins map[string]*StaticPlugin, data interface{}) (errRet error) {
 	var curPlugin *StaticPlugin
 	defer func() {
 		if r := recover(); r != nil {
@@ -50,13 +50,13 @@ func (wo *PluginManager) loadStaticPlugins(staticPlugins map[string]*StaticPlugi
 				pName = "." + curPlugin.Name
 			}
 			errRet = fmt.Errorf("<hotswap%s> panic: %+v\n%s", pName, r, debug.Stack())
-			wo.invokeEveryOnFree()
+			pm.invokeEveryOnFree()
 		} else if errRet != nil {
-			wo.invokeEveryOnFree()
+			pm.invokeEveryOnFree()
 		}
 	}()
 
-	if len(wo.pluginMap) != 0 {
+	if len(pm.pluginMap) != 0 {
 		return errors.New("never call loadStaticPlugins twice")
 	}
 
@@ -66,36 +66,36 @@ func (wo *PluginManager) loadStaticPlugins(staticPlugins map[string]*StaticPlugi
 	}
 	sort.Strings(a)
 
-	wo.when = time.Now()
+	pm.when = time.Now()
 	for _, name := range a {
 		curPlugin = staticPlugins[name]
-		if err := wo.loadStaticPlugin(curPlugin); err != nil {
+		if err := pm.loadStaticPlugin(curPlugin); err != nil {
 			return fmt.Errorf("failed to load the plugin %s. err: %w", name, err)
 		}
 	}
 	curPlugin = nil
 
-	if err := wo.initDeps(); err != nil {
+	if err := pm.initDeps(); err != nil {
 		return err
 	}
-	if err := wo.invokeEveryOnLoad(data); err != nil {
+	if err := pm.invokeEveryOnLoad(data); err != nil {
 		return err
 	}
-	if err := wo.setupVault(); err != nil {
+	if err := pm.setupVault(); err != nil {
 		return err
 	}
-	if err := wo.invokeEveryOnInit(); err != nil {
+	if err := pm.invokeEveryOnInit(); err != nil {
 		return err
 	}
 
-	wo.Warn("<hotswap> running under static linking mode")
+	pm.Warn("<hotswap> running under static linking mode")
 	return nil
 }
 
-func (wo *PluginManager) loadStaticPlugin(sp *StaticPlugin) error {
+func (pm *PluginManager) loadStaticPlugin(sp *StaticPlugin) error {
 	p := newPlugin()
 	p.Name = sp.Name
-	p.When = wo.when
+	p.When = pm.when
 	p.Note = "ok"
 	p.PluginFuncs = sp.PluginFuncs
 
@@ -121,17 +121,17 @@ func (wo *PluginManager) loadStaticPlugin(sp *StaticPlugin) error {
 		return err
 	}
 
-	wo.pluginMap[name2key(p.Name)] = p
+	pm.pluginMap[name2key(p.Name)] = p
 	return nil
 }
 
-func (wo *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []ReloadCallback) (Details, error) {
-	newManager := newPluginManager(wo.Logger, wo.opts.newExt)
-	staticPlugins := wo.staticPlugins
-	if len(wo.opts.whitelist) > 0 {
+func (sw *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []ReloadCallback) (Details, error) {
+	newManager := newPluginManager(sw.Logger, sw.opts.newExt)
+	staticPlugins := sw.staticPlugins
+	if len(sw.opts.whitelist) > 0 {
 		staticPlugins = make(map[string]*StaticPlugin)
-		for _, name := range wo.opts.whitelist {
-			if p, ok := wo.staticPlugins[name]; ok {
+		for _, name := range sw.opts.whitelist {
+			if p, ok := sw.staticPlugins[name]; ok {
 				staticPlugins[name] = p
 			} else {
 				return nil, fmt.Errorf("cannot find the static plugin %q", name)
@@ -151,6 +151,6 @@ func (wo *PluginManagerSwapper) loadStaticPlugins(data interface{}, cbs []Reload
 		result[k] = "ok"
 	}
 
-	wo.current.Store(newManager)
+	sw.current.Store(newManager)
 	return result, nil
 }

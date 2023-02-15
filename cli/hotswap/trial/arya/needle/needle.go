@@ -28,9 +28,9 @@ type Live_AryaKill struct {
 	Names []string
 }
 
-func (wo *Live_AryaKill) Handle(ctx *hctx.Context) error {
-	if len(wo.Names) > 0 {
-		ctx.Infof("Arya killed %s.", hutils.Join(wo.Names...))
+func (ak *Live_AryaKill) Handle(ctx *hctx.Context) error {
+	if len(ak.Names) > 0 {
+		ctx.Infof("Arya killed %s.", hutils.Join(ak.Names...))
 	}
 	return nil
 }
