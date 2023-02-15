@@ -3,7 +3,7 @@
 package dog
 
 import (
-	"github.com/edwingeng/hotswap/demo/slink/plugin/dog/hotbureau"
+	"github.com/edwingeng/hotswap/demo/slink/plugin/dog/hotswapbureau"
 
 	_ "github.com/edwingeng/hotswap/demo/slink/plugin/dog/woof"
 )
