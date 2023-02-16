@@ -67,7 +67,6 @@ func PackageFromDirectory(dir string) (string, string, error) {
 				return "", "", fmt.Errorf("empty package name. dir: %s", dir)
 			}
 			pkgName = pkg.Name
-
 		}
 	default:
 		return "", "", fmt.Errorf("%q contains %d packages", dir, n)

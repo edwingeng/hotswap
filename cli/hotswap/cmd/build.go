@@ -63,8 +63,9 @@ var (
 )
 
 var (
-	haltProgram = make(chan struct{})
-	timing      struct {
+	interruptProgram = make(chan struct{})
+
+	timing struct {
 		copyFilesStart       time.Time
 		copyFiles            time.Duration
 		processPackagesStart time.Time
@@ -157,6 +158,17 @@ func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	if !bc.staticLinking {
+		if runtime.GOOS == "windows" {
+			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present, " +
+				"try the static linking mode (--staticLinking) instead.\n")
+			os.Exit(1)
+		}
+		if bc.cleanOnly {
+			panic("--clean works only under the static linking mode")
+		}
+	}
+
 	bc.livePrefix = strings.ToLower(strings.TrimSpace(bc.livePrefix))
 	if bc.livePrefix == "" {
 		panic("--livePrefix cannot be empty")
@@ -169,9 +181,10 @@ func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 	if err := hutils.FindDirectory(bc.outputDir, "<outputDir>"); err != nil {
-		if !os.IsNotExist(err) {
+		if bc.staticLinking {
 			panic(err)
-		} else if bc.staticLinking {
+		}
+		if !os.IsNotExist(err) {
 			panic(err)
 		}
 		if err := os.MkdirAll(bc.outputDir, 0744); err != nil {
@@ -202,26 +215,25 @@ func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 
 	if bc.staticLinking {
 		if bc.outputDir == bc.pluginDir {
-			panic("pluginDir and outputDir must not be identical")
+			panic("<pluginDir> and <outputDir> must not be identical")
 		}
-		if rel, err := filepath.Rel(bc.pluginDir, bc.outputDir); err == nil &&
-			!strings.HasPrefix(rel, "..") {
-			panic("outputDir must not be a subdirectory of pluginDir")
+		if rel, err := filepath.Rel(bc.pluginDir, bc.outputDir); err == nil && !strings.HasPrefix(rel, "..") {
+			panic("<outputDir> must not be a subdirectory of <pluginDir>")
 		}
 	}
 
-	_, pkgPath, err := hutils.PackageFromDirectory(bc.pluginDir)
+	_, bc.pluginPkgPath, err = hutils.PackageFromDirectory(bc.pluginDir)
 	if err != nil {
 		panic(fmt.Errorf("failed to determine the package path. err: %v", err))
 	}
-	bc.pluginPkgPath = pkgPath
 
 	now := time.Now().Format("02150405")
 	commitInfo := bc.commitInfo()
 	if !bc.staticLinking {
-		bc.tmpDirName = fmt.Sprintf("%s-%s-%s", filepath.Base(bc.pluginDir), commitInfo, now)
+		const format = "%s-%s-%s"
+		bc.tmpDirName = fmt.Sprintf(format, filepath.Base(bc.pluginDir), commitInfo, now)
 		bc.tmpDir = filepath.Join(filepath.Dir(bc.pluginDir), bc.tmpDirName)
-		bc.tmpPkgPath = path.Join(path.Dir(pkgPath), bc.tmpDirName)
+		bc.tmpPkgPath = path.Join(path.Dir(bc.pluginPkgPath), bc.tmpDirName)
 
 		if bc.include != "" {
 			if bc.rexInclude, err = regexp.Compile(bc.include); err != nil {
@@ -261,7 +273,7 @@ func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		case x := <-chSignal:
 			signal.Reset(sigs...)
 			if x == syscall.SIGINT {
-				close(haltProgram)
+				close(interruptProgram)
 				go func() {
 					time.Sleep(time.Second)
 					fmt.Println("\nPress Ctrl-C again to terminate the program immediately.")
@@ -280,11 +292,6 @@ func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 
 	var outputFile string
 	if !bc.staticLinking {
-		if runtime.GOOS == "windows" {
-			_, _ = os.Stderr.WriteString("Go plugin does not support Windows at present, " +
-				"try the static linking mode (--staticLinking) instead.\n")
-			os.Exit(1)
-		}
 		if v := os.Getenv("hotswap:checkRequiredPluginFuncs"); v != "false" && v != "0" {
 			parseRequiredPluginFuncs(bc.pluginDir, "")
 		}
@@ -295,19 +302,21 @@ func (bc *buildCmdT) execute(cmd *cobra.Command, args []string) {
 		bc.genStaticPlugin()
 	}
 
-	if bc.verbose {
-		timing.total = time.Since(timing.totalStart)
-		bc.outputTiming()
-	}
-	if bc.verbose && outputFile != "" {
-		fmt.Println()
-	}
+	timing.total = time.Since(timing.totalStart)
+	bc.outputTiming()
 	if outputFile != "" {
+		if bc.verbose {
+			fmt.Println()
+		}
 		fmt.Println(outputFile)
 	}
 }
 
 func (bc *buildCmdT) outputTiming() {
+	if !bc.verbose {
+		return
+	}
+
 	fmt.Println()
 	fmt.Println("Timing:")
 	fmt.Println(strings.Repeat("=", 30))
@@ -332,9 +341,9 @@ func (bc *buildCmdT) outputTiming() {
 	}
 	if bc.staticLinking {
 		if bc.cleanOnly {
-			a = []timingItem{a[1], a[3]}
-		} else {
 			a = []timingItem{a[3]}
+		} else {
+			a = []timingItem{a[1], a[3]}
 		}
 	}
 	maxLen := len(processPackages)
@@ -370,7 +379,7 @@ func (bc *buildCmdT) commitInfo() string {
 	output2 = bytes.Trim(output2, "\r\n")
 
 	if bc.verbose {
-		fmt.Printf("Commit info: %s, %s\n\n", output1, output2)
+		fmt.Printf("Commit Info: %s, %s\n\n", output1, output2)
 	}
 
 	n, err := strconv.Atoi(string(output2))
@@ -383,19 +392,19 @@ func (bc *buildCmdT) commitInfo() string {
 
 func (bc *buildCmdT) genStaticPlugin() {
 	fmt.Printf("Generating static code for plugin %q...\n", filepath.Base(bc.pluginDir))
-	genStaticCode := func(args completePluginArgs, generated *generatedFiles) {
+	epilogue := func(args completePluginArgs, generated *generatedFiles) {
 		genHotswapStaticPluginInit(args, generated)
 		genHotswapStaticPlugins(args, generated)
 	}
-	completePlugin(buildCompletePluginArgs(bc, true, true, genStaticCode))
+	completePlugin(buildCompletePluginArgs(bc, true, true, epilogue))
 }
 
-func countPluginInitFiles(args completePluginArgs) int {
+func findPluginInitFiles(args completePluginArgs) []string {
 	str1 := strings.ReplaceAll(hotswapStaticPluginInitFile, ".", `\.`)
 	str2 := strings.ReplaceAll(str1, "%s", ".+?")
 	rexName := regexp.MustCompile(str2)
 
-	var counter int
+	var a []string
 	_ = filepath.WalkDir(args.outputDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -406,11 +415,11 @@ func countPluginInitFiles(args completePluginArgs) int {
 			}
 		}
 		if rexName.MatchString(filepath.Base(path)) {
-			counter++
+			a = append(a, path)
 		}
 		return nil
 	})
-	return counter
+	return a
 }
 
 func removeStaticFiles(args completePluginArgs) {
@@ -455,20 +464,16 @@ func removeStaticFiles(args completePluginArgs) {
 	}
 
 	pluginName := filepath.Base(args.pluginDir)
-	pluginInitFile := filepath.Join(args.outputDir, fmt.Sprintf(hotswapStaticPluginInitFile, pluginName))
-	var pluginInitFileRemoved bool
-	if _, err := os.Stat(pluginInitFile); err == nil {
-		err := os.RemoveAll(pluginInitFile)
-		if err != nil {
+	allInitFiles := findPluginInitFiles(args)
+	for _, f := range allInitFiles {
+		if err := os.Remove(f); err != nil {
 			panic(err)
 		}
-		pluginInitFileRemoved = true
 	}
 
-	numInitFiles := countPluginInitFiles(args)
 	pluginVarDefFile := filepath.Join(args.outputDir, hotswapStaticPluginsFile)
 	var pluginVarDefFileWantRemoved bool
-	if numInitFiles == 0 {
+	if len(allInitFiles) == 0 {
 		if _, err := os.Stat(pluginVarDefFile); err == nil {
 			pluginVarDefFileWantRemoved = true
 		}
@@ -484,11 +489,13 @@ func removeStaticFiles(args completePluginArgs) {
 		for _, f := range a {
 			fmt.Println("\t" + f)
 		}
-		if pluginInitFileRemoved {
+		if len(allInitFiles) > 0 {
 			fmt.Println()
 			fmt.Println("Removed Files:")
 			fmt.Println(strings.Repeat("=", 30))
-			fmt.Println("\t" + fmt.Sprintf(hotswapStaticPluginInitFile, pluginName))
+			for _, f := range allInitFiles {
+				fmt.Println("\t" + filepath.Base(f))
+			}
 		}
 		if pluginVarDefFileWantRemoved {
 			fmt.Println()
@@ -579,7 +586,7 @@ func genHotswapStaticPluginInit(args completePluginArgs, generated *generatedFil
 	}
 	switch pluginPkgName {
 	case "hotswap":
-		pluginPkgName = "hotswap2"
+		pluginPkgName = "hotswapx"
 	}
 
 	tpl := template.Must(template.New("hotswapStaticPluginInit").
@@ -648,13 +655,13 @@ func genHotswapStaticPlugins(args completePluginArgs, generated *generatedFiles)
 }
 
 func (bc *buildCmdT) buildPlugin() string {
-	if bc.goBuild {
+	if !bc.goBuild {
+		fmt.Println(bc.tmpDir)
+	} else {
 		fmt.Printf("Building plugin %q...\n", filepath.Base(bc.pluginDir))
 		if bc.verbose || bc.leaveTemps {
 			fmt.Println("TempDir: " + bc.tmpDir)
 		}
-	} else {
-		fmt.Println(bc.tmpDir)
 	}
 
 	timing.copyFilesStart = time.Now()
@@ -801,7 +808,7 @@ func (bc *buildCmdT) copyFiles(files []string) {
 			var rel string
 			for {
 				select {
-				case <-haltProgram:
+				case <-interruptProgram:
 					return
 				case <-abort:
 					return
@@ -864,6 +871,7 @@ type completePluginArgs struct {
 	gofmt         bool
 	clean         bool
 	cleanOnly     bool
+	staticLinking bool
 	livePrefix    string
 	pluginDir     string
 	outputDir     string
@@ -871,15 +879,16 @@ type completePluginArgs struct {
 	tmpDirName    string
 	tmpDir        string
 	tmpPkgPath    string
-	genStaticCode func(completePluginArgs, *generatedFiles)
+	epilogue      func(completePluginArgs, *generatedFiles)
 }
 
-func buildCompletePluginArgs(cmd *buildCmdT, gofmt, clean bool, genStaticCode func(completePluginArgs, *generatedFiles)) completePluginArgs {
-	return completePluginArgs{
+func buildCompletePluginArgs(cmd *buildCmdT, gofmt, clean bool, epilogue func(completePluginArgs, *generatedFiles)) completePluginArgs {
+	args := completePluginArgs{
 		verbose:       cmd.verbose,
 		gofmt:         gofmt,
 		clean:         clean,
 		cleanOnly:     cmd.cleanOnly,
+		staticLinking: cmd.staticLinking,
 		livePrefix:    cmd.livePrefix,
 		pluginDir:     cmd.pluginDir,
 		outputDir:     cmd.outputDir,
@@ -887,19 +896,13 @@ func buildCompletePluginArgs(cmd *buildCmdT, gofmt, clean bool, genStaticCode fu
 		tmpDirName:    cmd.tmpDirName,
 		tmpDir:        cmd.tmpDir,
 		tmpPkgPath:    cmd.tmpPkgPath,
-		genStaticCode: genStaticCode,
 	}
-}
-
-func parseHotswapComment(group *ast.CommentGroup) string {
-	if group != nil {
-		for _, comment := range group.List {
-			if i := strings.Index(comment.Text, "hotswap:"); i >= 0 {
-				return strings.TrimSpace(comment.Text[i+8:])
-			}
-		}
+	if epilogue != nil {
+		args.epilogue = epilogue
+	} else {
+		args.epilogue = func(completePluginArgs, *generatedFiles) {}
 	}
-	return ""
+	return args
 }
 
 func genHotswapBureau(args completePluginArgs, generated *generatedFiles) {
@@ -930,7 +933,7 @@ func genHotswapMain(args completePluginArgs, livePackages map[string]*packages.P
 	sort.Strings(a)
 
 	pkgName := "main"
-	if args.genStaticCode != nil {
+	if args.staticLinking {
 		var err error
 		pkgName, _, err = hutils.PackageFromDirectory(args.tmpDir)
 		if err != nil {
@@ -1017,7 +1020,7 @@ func completePlugin(args completePluginArgs) {
 		fmt.Printf("Total Packages: %d\n", len(pkgs))
 	}
 
-	liveNames := make(map[string]string)
+	liveNames := make(map[string]struct{})
 	liveFuncs := make(map[string][]string)
 	liveTypes := make(map[string][]string)
 	livePackages := make(map[string]*packages.Package)
@@ -1033,7 +1036,7 @@ func completePlugin(args completePluginArgs) {
 			continue
 		}
 		select {
-		case <-haltProgram:
+		case <-interruptProgram:
 			return
 		default:
 		}
@@ -1053,7 +1056,7 @@ func completePlugin(args completePluginArgs) {
 						printErrorMessage("duplicate live func/type name detected: " + funcName)
 						continue
 					}
-					liveNames[funcName] = parseHotswapComment(funcDecl.Doc)
+					liveNames[funcName] = struct{}{}
 					liveFuncs[dir] = append(liveFuncs[dir], funcName)
 					livePackages[dir] = pkg
 				} else if genDecl, ok := decl.(*ast.GenDecl); ok {
@@ -1079,7 +1082,7 @@ func completePlugin(args completePluginArgs) {
 							printErrorMessage("duplicate live func/type name detected: " + typeName)
 							continue
 						}
-						liveNames[typeName] = parseHotswapComment(typeSpec.Comment)
+						liveNames[typeName] = struct{}{}
 						liveTypes[dir] = append(liveTypes[dir], typeName)
 						livePackages[dir] = pkg
 					}
@@ -1130,16 +1133,14 @@ func completePlugin(args completePluginArgs) {
 
 	for k, pkg := range livePackages {
 		select {
-		case <-haltProgram:
+		case <-interruptProgram:
 			return
 		default:
 		}
 		genHotswapLive(args, k, pkg, liveFuncs[k], liveTypes[k], &generated)
 	}
 
-	if args.genStaticCode != nil {
-		args.genStaticCode(args, &generated)
-	}
+	args.epilogue(args, &generated)
 
 	if args.verbose {
 		var all = generated.snapshot()
