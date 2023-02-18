@@ -9,7 +9,7 @@ require (
 	github.com/pierrec/xxHash v0.1.5
 	github.com/spf13/cobra v1.1.3
 	go.uber.org/atomic v1.10.0
-	golang.org/x/mod v0.6.0
+	golang.org/x/mod v0.8.0
 	golang.org/x/tools v0.1.12
 )
 
