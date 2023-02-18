@@ -1,13 +1,12 @@
 package job
 
 import (
+	"github.com/edwingeng/hotswap/demo/livex/g"
+	"github.com/edwingeng/hotswap/demo/livex/plugin/guardian/job/handler"
+	"github.com/edwingeng/live"
 	"math/rand"
 	"reflect"
-	"strings"
 	"time"
-
-	"github.com/edwingeng/hotswap/demo/livex/g"
-	"github.com/edwingeng/live"
 )
 
 var (
@@ -23,13 +22,6 @@ var (
 		"Ironkill",
 		"Rabidcleaver",
 	}
-
-	respPool = []string{
-		"I'm here",
-		"Here I am",
-		"Present",
-		"Attend",
-	}
 )
 
 func MakeRollCall(pluginName string, compileTimeString string) {
@@ -39,24 +31,12 @@ func MakeRollCall(pluginName string, compileTimeString string) {
 	g.Tickque.AddJob("live_ResponseRollCall", live.WrapString(name))
 }
 
-func live_ResponseRollCall(pluginName string, compileTimeString string, jobData live.Data) error {
-	name := jobData.String()
-	resp := respPool[rand.Intn(len(respPool))]
-	g.Logger.Infof("<%s.%s> %s: %s. reloadCounter: %v",
-		pluginName, compileTimeString, name, resp, g.PluginManagerSwapper.ReloadCounter())
-	return nil
-}
-
 func Fire(pluginName string, compileTimeString string) {
-	var job live_jobFire
+	var job handler.Live_jobFire
 	job.N = rand.Intn(3) + 1
 	g.Logger.Infof("<%s.%s> Fire x %d. reloadCounter: %v",
 		pluginName, compileTimeString, job.N, g.PluginManagerSwapper.ReloadCounter())
-
-	go func() {
-		time.Sleep(time.Second * 2)
-		addJobIndirect(&job)
-	}()
+	addJobIndirect(&job)
 }
 
 func addJobIndirect(obj interface{}) {
@@ -68,18 +48,10 @@ func addJobIndirect(obj interface{}) {
 		panic("obj must be a pointer to a struct")
 	}
 
-	jobType := typ.Elem().Name()
-	jobData := live.MustWrapObject(obj)
-	g.Tickque.AddJob(jobType, jobData)
-}
-
-type live_jobFire struct {
-	N int
-}
-
-func (jf *live_jobFire) Handle(pluginName string, compileTimeString string) error {
-	str := strings.TrimSpace(strings.Repeat("Bang! ", jf.N))
-	g.Logger.Infof("<%s.%s> %s. reloadCounter: %v",
-		pluginName, compileTimeString, str, g.PluginManagerSwapper.ReloadCounter())
-	return nil
+	go func() {
+		time.Sleep(time.Second)
+		jobType := typ.Elem().Name()
+		jobData := live.MustWrapObject(obj)
+		g.Tickque.AddJob(jobType, jobData)
+	}()
 }
