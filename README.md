@@ -2,7 +2,7 @@
 
 [简体中文版](./README.zh-CN.md)
 
-*`Hotswap`* provides a solution to reload your `go` code without restarting your server, interrupting or blocking any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
+*`Hotswap`* provides you a complete solution to reload your `go` code without restarting your server, interrupting or blocking any ongoing procedure. *`Hotswap`* is built upon the plugin mechanism.
 
 # Major Features
 
