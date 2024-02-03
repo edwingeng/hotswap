@@ -130,3 +130,35 @@ type Live_Bar struct {
 ```
 - [`live data`](https://github.com/edwingeng/live) 是个类型隔离器。你可以在创建异步任务时把任务数据转成 `live data` 对象，再在执行任务时把数据恢复回来。
 - 例子 `livex` 包含更多细节。
+
+# FAQ
+
+- **怎样用调试器调试插件？**
+
+构建时用静态链接 `--staticLink`。更多信息请参考演示程序 `slink`。
+
+- **`hotswap` 能在 Windows 上工作吗？**
+
+可以，构建时用静态链接 `--staticLink`。不过，在 Windows 上无法热更，因为 `go` 语言的 `plugin` 机制不支持 Windows。
+
+
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>

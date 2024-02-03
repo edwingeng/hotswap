@@ -132,3 +132,35 @@ type Live_Bar struct {
 ```
 - [`live data`](https://github.com/edwingeng/live) is a type guardian. You can convert your data into a `live data` object when scheduling an asynchronous job and restore your data from the `live data` object when handling the job.
 - See the demo `livex` for details.
+
+# FAQ
+
+- **How can I debug a plugin with a debugger?**
+
+Build it with `--staticLink`. For more information, please refer to the demo `slink`.
+
+- **Does `hotswap` work on Windows?**
+
+Building with `--staticLink` works on Windows, but plugin reloading is not an option because Go's plugin mechanism doesn't support Windows.
+
+
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
+&nbsp;<br/>
