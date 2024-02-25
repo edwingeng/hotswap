@@ -62,6 +62,10 @@ func NewPluginManagerSwapper(pluginDir string, opts ...Option) *PluginManagerSwa
 	return swapper
 }
 
+func (sw *PluginManagerSwapper) ResetPluginDir(pluginDir string) {
+	sw.opts.pluginDir = pluginDir
+}
+
 func (sw *PluginManagerSwapper) Current() *PluginManager {
 	v := sw.current.Load()
 	pluginManager, _ := v.(*PluginManager)
