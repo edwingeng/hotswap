@@ -6,6 +6,7 @@
 
 - 轻松热更代码
 - 完全隔离新老版本
+- 像往常一样使用层级结构的 `package`
 - 通过 `Plugin.InvokeFunc()` 从宿主调用插件中的函数
 - 通过 `PluginManager.Vault.Extension` 和 `PluginManager.Vault.DataBag` 向宿主暴露插件中的数据和函数
 - 借助 `live function`、`live type` 和 `live data` 用最新代码执行异步任务

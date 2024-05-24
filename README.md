@@ -8,6 +8,7 @@
 
 - Reload your code like a breeze
 - Run different versions of a plugin in complete isolation
+- Use the hierarchical package structure as usual
 - Invoke an in-plugin function from its host program with `Plugin.InvokeFunc()`
 - Expose in-plugin data and functions with `PluginManager.Vault.Extension` and/or `PluginManager.Vault.DataBag`
 - Handle asynchronous jobs using the latest code with `live function`, `live type`, and `live data`
